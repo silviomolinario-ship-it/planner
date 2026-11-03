@@ -254,6 +254,9 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; padding: 0; cursor: pointer; }
 .swatch[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 2px var(--paper); }
 #cat-add { justify-self: start; }
+#cats-screen { max-width: 640px; margin: 0 auto; }
+#cats-screen .card { display: grid; gap: 12px; }
+.screen-title { margin: 0; font-size: 18px; font-weight: 800; }
 .timer { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .clock { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); margin-right: 4px; }
 .timer small { color: var(--muted); font-size: 12px; }
@@ -295,6 +298,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
+      <button id="open-cats" type="button">Categorias</button>
       <button id="logout" type="button">Sair</button>
     </header>
 
@@ -326,15 +330,6 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         </section>
         <section class="card compromissos">
           <h2>Tarefas</h2>
-          <div id="cat-section" class="cats">
-            <p class="note">Categorias: escolha uma cor para cada uma, ou crie novas.</p>
-            <div id="cat-list"></div>
-            <div class="cat-new">
-              <input id="cat-name" type="text" placeholder="Nova categoria" aria-label="Nome da nova categoria">
-              <div id="cat-palette"></div>
-              <button id="cat-add" type="button">Criar categoria</button>
-            </div>
-          </div>
           <div id="events-list"></div>
           <form id="event-form" class="event-form">
             <input id="ev-title" type="text" placeholder="Tarefa" aria-label="Título da tarefa" required>
@@ -376,6 +371,22 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
           <h2>Notas</h2>
           <textarea data-field="notas" aria-label="Notas"></textarea>
         </section>
+      </div>
+    </div>
+  </section>
+
+  <section id="cats-screen" hidden>
+    <header class="top">
+      <button id="cats-back" type="button">‹ Voltar</button>
+      <h1 class="screen-title">Categorias</h1>
+    </header>
+    <div class="card">
+      <p class="note">Escolha uma cor para cada categoria, ou crie novas.</p>
+      <div id="cat-list"></div>
+      <div class="cat-new">
+        <input id="cat-name" type="text" placeholder="Nova categoria" aria-label="Nome da nova categoria">
+        <div id="cat-palette"></div>
+        <button id="cat-add" type="button" class="primary">Criar categoria</button>
       </div>
     </div>
   </section>
@@ -993,6 +1004,16 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   $("event-form").addEventListener("submit", addEvent);
   $("ev-cancel").addEventListener("click", resetForm);
   $("cat-add").addEventListener("click", createCategory);
+  $("open-cats").addEventListener("click", () => {
+    appEl.hidden = true;
+    $("cats-screen").hidden = false;
+    window.scrollTo(0, 0);
+    renderCategories();
+  });
+  $("cats-back").addEventListener("click", () => {
+    $("cats-screen").hidden = true;
+    appEl.hidden = false;
+  });
   $("ev-priority").addEventListener("change", () => { $("ev-level").hidden = !$("ev-priority").checked; });
 
   window.addEventListener("online", () => { if (!saveTimer) saveDay(); });
