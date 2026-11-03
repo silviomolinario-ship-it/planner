@@ -273,6 +273,14 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .task-rows { display: grid; gap: 6px; padding: 2px 0 8px 14px; }
 .task-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
 .task-row .name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.cat-block { display: grid; gap: 6px; padding-bottom: 10px; border-bottom: 1px dashed var(--line); }
+.sub-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; background: var(--soft-blue); border-radius: 999px; padding: 2px 4px 2px 10px; font-size: 13px; }
+.chip .ghost { padding: 0 6px; font-size: 14px; }
+.sub-add { display: flex; gap: 8px; flex-wrap: wrap; }
+.sub-add input { flex: 1; min-width: 140px; }
+.sub-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; background: none; border: none; padding: 6px 0; cursor: pointer; font-weight: 700; color: var(--ink); text-align: left; }
+.sub-task { padding-left: 14px; }
 .timer { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .clock { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); margin-right: 4px; }
 .timer small { color: var(--muted); font-size: 12px; }
@@ -314,7 +322,6 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <button id="open-dash" type="button">Dashboard</button>
       <button id="open-cats" type="button">Categorias</button>
       <button id="logout" type="button">Sair</button>
     </header>
@@ -323,6 +330,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       <button type="button" data-toggle="lembretes" aria-pressed="false">Lembretes</button>
       <button type="button" data-toggle="tarefas" aria-pressed="false">Tarefas</button>
       <button type="button" data-toggle="notas" aria-pressed="false">Notas</button>
+      <button id="open-dash" type="button">Dashboard</button>
     </nav>
 
     <div class="grid">
@@ -379,6 +387,9 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
             </select>
             <select id="ev-category" aria-label="Categoria">
               <option value="">Sem categoria</option>
+            </select>
+            <select id="ev-subcategory" aria-label="Subcategoria">
+              <option value="">Sem subcategoria</option>
             </select>
             <select id="ev-kind" aria-label="Tipo">
               <option value="tarefa">Tarefa</option>
@@ -504,7 +515,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   let timers = {};
   let categories = [];      // categorias do usuário: { id, name, color }
   const PALETTE = ["#2f8f5b", "#5aa9e6", "#8a5cc2", "#e0a800", "#e67e22", "#c0392b", "#16a085", "#34495e", "#d63384", "#7f8c8d"];
-  let newCatColor = PALETTE[0];          // cronômetro por tarefa neste dia: { total, runningSince, finished }      // compromissos concluídos no dia atual: { [eventId]: true }
+  let newCatColor = PALETTE[0];
+  let subcats = [];         // subcategorias: { id, category_id, name }          // cronômetro por tarefa neste dia: { total, runningSince, finished }      // compromissos concluídos no dia atual: { [eventId]: true }
 
   function todayStr() {
     return new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD no fuso local
@@ -606,7 +618,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     cb.setAttribute("aria-label", "Concluído: " + ev.title);
     cb.addEventListener("change", () => toggleDone(ev, cb.checked));
     const label = document.createElement("span");
-    label.textContent = (catById(ev.category_id) ? catById(ev.category_id).name + " · " : "") + (ev.kind === "reuniao" ? "Reunião · " : "") +(ev.is_priority ? LEVELS[ev.priority_level].label + " · " : "") + timeRange(ev.start_time, ev.end_time) + "  " + ev.title;
+    label.textContent = (catLabel(ev) ? catLabel(ev) + " · " : "") +(ev.kind === "reuniao" ? "Reunião · " : "") +(ev.is_priority ? LEVELS[ev.priority_level].label + " · " : "") + timeRange(ev.start_time, ev.end_time) + "  " + ev.title;
     const cat = catById(ev.category_id);
     if (cat) wrap.style.borderLeftColor = cat.color;
     wrap.append(cb, label);
@@ -630,7 +642,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     const catRow = catById(ev.category_id);
     if (catRow) {
       const cs = document.createElement("small");
-      cs.textContent = "Categoria: " + catRow.name;
+      cs.textContent = "Categoria: " + catLabel(ev);
       cs.style.color = catRow.color;
       text.append(cs);
     }
@@ -764,12 +776,42 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         deleteCategory(c);
       });
       row.append(name, paletteEl(c.color, (color) => updateCategory(c, { color: color })), del);
-      list.append(row);
+      const block = document.createElement("div");
+      block.className = "cat-block";
+      const subList = document.createElement("div");
+      subList.className = "sub-list";
+      subcats.filter((s) => s.category_id === c.id).forEach((s) => {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.textContent = s.name;
+        const x = document.createElement("button");
+        x.type = "button";
+        x.className = "ghost";
+        x.textContent = "×";
+        x.setAttribute("aria-label", "Excluir subcategoria " + s.name);
+        x.addEventListener("click", () => deleteSubcategory(s));
+        chip.append(x);
+        subList.append(chip);
+      });
+      const addRow = document.createElement("div");
+      addRow.className = "sub-add";
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.placeholder = "Nova subcategoria";
+      inp.setAttribute("aria-label", "Nova subcategoria de " + c.name);
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.textContent = "Adicionar";
+      addBtn.addEventListener("click", () => createSubcategory(c, inp.value));
+      addRow.append(inp, addBtn);
+      block.append(row, subList, addRow);
+      list.append(block);
     });
 
     const np = $("cat-palette");
     np.textContent = "";
     np.append(paletteEl(newCatColor, (color) => { newCatColor = color; renderCategories(); }));
+    renderSubSelect();
   }
   async function createCategory() {
     const name = $("cat-name").value.trim();
@@ -806,6 +848,65 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     } catch (e) {
       setStatus("Não foi possível excluir a categoria");
     }
+  }
+
+  // Subcategorias: pertencem a uma categoria (ex.: Fiserv → Planejamento, Execução)
+  async function loadSubcats() {
+    try {
+      const { data, error } = await sb.from("planner_subcategories").select("*").order("created_at", { ascending: true });
+      if (error) throw error;
+      subcats = data || [];
+    } catch (e) {
+      setStatus("Sem conexão: subcategorias podem estar desatualizadas");
+    }
+    renderCategories();
+  }
+  async function createSubcategory(c, name) {
+    name = (name || "").trim();
+    if (!name) { setStatus("Digite o nome da subcategoria"); return; }
+    try {
+      const { data: userData } = await sb.auth.getUser();
+      const { error } = await sb.from("planner_subcategories")
+        .insert({ user_id: userData.user.id, category_id: c.id, name: name });
+      if (error) throw error;
+      await loadSubcats();
+      setStatus("Subcategoria criada");
+    } catch (e) {
+      setStatus("Não foi possível criar a subcategoria");
+    }
+  }
+  async function deleteSubcategory(s) {
+    try {
+      const { error } = await sb.from("planner_subcategories").delete().eq("id", s.id);
+      if (error) throw error;
+      await loadSubcats();
+      await loadEvents();
+      setStatus("Subcategoria excluída");
+    } catch (e) {
+      setStatus("Não foi possível excluir a subcategoria");
+    }
+  }
+  function renderSubSelect() {
+    const sel = $("ev-subcategory");
+    const current = sel.value;
+    sel.textContent = "";
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "Sem subcategoria";
+    sel.append(none);
+    subcats.filter((s) => s.category_id === $("ev-category").value).forEach((s) => {
+      const o = document.createElement("option");
+      o.value = s.id;
+      o.textContent = s.name;
+      sel.append(o);
+    });
+    sel.value = current;
+  }
+  function catLabel(ev) {
+    const c = catById(ev.category_id);
+    if (!c) return "";
+    const s = subcats.find((x) => x.id === ev.subcategory_id);
+    return s ? c.name + " › " + s.name : c.name;
   }
 
   // Cronômetro por tarefa: iniciar, pausar, retomar e finalizar
@@ -916,6 +1017,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     $("ev-repeat").value = ev.repeat_rule;
     $("ev-kind").value = ev.kind || "tarefa";
     $("ev-category").value = ev.category_id || "";
+    renderSubSelect();
+    $("ev-subcategory").value = ev.subcategory_id || "";
     $("ev-priority").checked = !!ev.is_priority;
     $("ev-level").value = ev.priority_level || "normal";
     $("ev-level").hidden = !ev.is_priority;
@@ -927,6 +1030,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   function resetForm() {
     editingId = null;
     $("event-form").reset();
+    renderSubSelect();
     $("ev-startdate").value = currentDay;
     $("ev-level").hidden = true;
     $("ev-submit").textContent = "Adicionar tarefa";
@@ -959,6 +1063,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         ends_on: endDate,
         kind: kind,
         category_id: $("ev-category").value || null,
+        subcategory_id: $("ev-subcategory").value || null,
         is_priority: isPrio,
         priority_level: isPrio ? level : null
       };
@@ -1057,6 +1162,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   $("event-form").addEventListener("submit", addEvent);
   $("ev-cancel").addEventListener("click", resetForm);
   $("cat-add").addEventListener("click", createCategory);
+  $("ev-category").addEventListener("change", renderSubSelect);
   $("open-cats").addEventListener("click", () => {
     appEl.hidden = true;
     $("cats-screen").hidden = false;
@@ -1084,6 +1190,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 
   // Dashboard: tempo somado por categoria (nível 1) e por tarefa (nível 2)
   const openCats = new Set();
+  const openSubs = new Set();
   let dashData = { groups: [], grand: 0 };
   function fmtHM(ms) {
     const m = Math.round(ms / 60000);
@@ -1114,17 +1221,25 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         perTask[id] = (perTask[id] || 0) + ms;
       });
     });
+    // Nível 1: categoria · nível 2: subcategoria · nível 3: tarefa
     const groups = new Map();
     Object.keys(perTask).forEach((id) => {
       const ev = events.find((x) => x.id === id);
       const cat = ev ? catById(ev.category_id) : null;
       const key = cat ? cat.id : "none";
       if (!groups.has(key)) {
-        groups.set(key, { key: key, name: cat ? cat.name : "Sem categoria", color: cat ? cat.color : "#7f8c8d", total: 0, tasks: [] });
+        groups.set(key, { key: key, name: cat ? cat.name : "Sem categoria", color: cat ? cat.color : "#7f8c8d", total: 0, subs: new Map() });
       }
       const g = groups.get(key);
+      const sub = ev && ev.subcategory_id ? subcats.find((s) => s.id === ev.subcategory_id) : null;
+      const sKey = sub ? sub.id : "none";
+      if (!g.subs.has(sKey)) {
+        g.subs.set(sKey, { key: g.key + "|" + sKey, name: sub ? sub.name : "Sem subcategoria", total: 0, tasks: [] });
+      }
+      const s = g.subs.get(sKey);
       g.total += perTask[id];
-      g.tasks.push({ title: ev ? ev.title : "Tarefa removida", ms: perTask[id] });
+      s.total += perTask[id];
+      s.tasks.push({ title: ev ? ev.title : "Tarefa removida", ms: perTask[id] });
     });
     const list = [...groups.values()].sort((a, b) => b.total - a.total);
     dashData = { groups: list, grand: list.reduce((s, g) => s + g.total, 0) };
@@ -1167,21 +1282,41 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       });
       wrap.append(head);
       if (openCats.has(g.key)) {
-        const tasks = document.createElement("div");
-        tasks.className = "task-rows";
-        g.tasks.slice().sort((a, b) => b.ms - a.ms).forEach((t) => {
-          const row = document.createElement("div");
-          row.className = "task-row";
-          const name = document.createElement("span");
-          name.className = "name";
-          name.textContent = t.title;
-          const tm = document.createElement("span");
-          tm.className = "time";
-          tm.textContent = fmtHM(t.ms);
-          row.append(name, tm);
-          tasks.append(row);
+        const subsBox = document.createElement("div");
+        subsBox.className = "task-rows";
+        [...g.subs.values()].sort((a, b) => b.total - a.total).forEach((s) => {
+          const open = openSubs.has(s.key);
+          const sh = document.createElement("button");
+          sh.type = "button";
+          sh.className = "sub-head";
+          sh.setAttribute("aria-expanded", String(open));
+          const sn = document.createElement("span");
+          sn.textContent = s.name;
+          const st = document.createElement("span");
+          st.className = "time";
+          st.textContent = fmtHM(s.total) + (open ? " ▾" : " ▸");
+          sh.append(sn, st);
+          sh.addEventListener("click", () => {
+            if (open) openSubs.delete(s.key); else openSubs.add(s.key);
+            paintDash();
+          });
+          subsBox.append(sh);
+          if (open) {
+            s.tasks.slice().sort((a, b) => b.ms - a.ms).forEach((t) => {
+              const row = document.createElement("div");
+              row.className = "task-row sub-task";
+              const name = document.createElement("span");
+              name.className = "name";
+              name.textContent = t.title;
+              const tm = document.createElement("span");
+              tm.className = "time";
+              tm.textContent = fmtHM(t.ms);
+              row.append(name, tm);
+              subsBox.append(row);
+            });
+          }
         });
-        wrap.append(tasks);
+        wrap.append(subsBox);
       }
       box.append(wrap);
     });
@@ -1246,6 +1381,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     if (session) {
       showApp(true);
       loadCategories();
+      loadSubcats();
       loadEvents();
       loadDay(currentDay);
     } else {
