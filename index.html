@@ -248,6 +248,10 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .timer { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .clock { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); margin-right: 4px; }
 .timer small { color: var(--muted); font-size: 12px; }
+.timer-btn { color: #fff; border: none; font-weight: 700; padding: 6px 12px; }
+.timer-btn.start { background: #2f8f5b; }
+.timer-btn.pause { background: #e0a800; color: #1f2430; }
+.timer-btn.end { background: #c0392b; }
 .empty { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
 .event-form {
   display: grid;
@@ -618,7 +622,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     const btn = (label, action) => {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = "ghost";
+      b.className = "timer-btn " + (action === "pause" ? "pause" : action === "end" ? "end" : "start");
       b.textContent = label;
       b.addEventListener("click", () => setTimer(ev.id, action));
       return b;
