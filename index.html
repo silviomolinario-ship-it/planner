@@ -1242,12 +1242,16 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       s.tasks.push({ title: ev ? ev.title : "Tarefa removida", ms: perTask[id] });
     });
     const list = [...groups.values()].sort((a, b) => b.total - a.total);
-    dashData = { groups: list, grand: list.reduce((s, g) => s + g.total, 0) };
+    const meet = Object.keys(perTask).reduce((s, id) => {
+      const ev = events.find((x) => x.id === id);
+      return s + (ev && ev.kind === "reuniao" ? perTask[id] : 0);
+    }, 0);
+    dashData = { groups: list, grand: list.reduce((s, g) => s + g.total, 0), meet: meet };
     paintDash();
   }
   function paintDash() {
     const { groups, grand } = dashData;
-    $("dash-total").textContent = "Total no período: " + fmtHM(grand);
+    $("dash-total").textContent = "Total no período: " + fmtHM(grand) + "  ·  Em reuniões: " + fmtHM(dashData.meet);
     const box = $("dash-cats");
     box.textContent = "";
     if (!groups.length) {
