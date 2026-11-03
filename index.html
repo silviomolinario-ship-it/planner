@@ -342,7 +342,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
             </select>
             <p class="matrix">Matriz de priorização (Eisenhower): Urgente = importante e urgente. Importante = importante, sem pressão de prazo. Normal = o resto, que pode ser delegado ou eliminado.</p>
             <p class="hint">Começa no dia selecionado acima. Marque o checkbox em cada dia em que concluir.</p>
-            <button class="primary" type="submit">Adicionar tarefa</button>
+            <button id="ev-submit" class="primary" type="submit">Adicionar tarefa</button>
+            <button id="ev-cancel" type="button" hidden>Cancelar edição</button>
           </form>
         </section>
 
@@ -569,7 +570,14 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       deleteEvent(ev);
     });
 
-    text.append(timerControl(ev));
+    const bar = timerControl(ev);
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "ghost";
+    edit.textContent = "Editar";
+    edit.addEventListener("click", () => startEdit(ev));
+    bar.append(edit);
+    text.append(bar);
     row.append(cb, text, del);
     return row;
   }
@@ -670,6 +678,34 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     renderEvents();
   }
 
+  // Edição: o formulário é preenchido com a tarefa e o botão salva as alterações
+  let editingId = null;
+  function startEdit(ev) {
+    editingId = ev.id;
+    $("ev-title").value = ev.title;
+    $("ev-startdate").value = ev.starts_on;
+    $("ev-enddate").value = ev.ends_on || "";
+    $("ev-start").value = ev.start_time.slice(0, 5);
+    $("ev-end").value = ev.end_time ? ev.end_time.slice(0, 5) : "";
+    $("ev-repeat").value = ev.repeat_rule;
+    $("ev-kind").value = ev.kind || "tarefa";
+    $("ev-priority").checked = !!ev.is_priority;
+    $("ev-level").value = ev.priority_level || "normal";
+    $("ev-level").hidden = !ev.is_priority;
+    $("ev-submit").textContent = "Salvar alterações";
+    $("ev-cancel").hidden = false;
+    $("ev-title").focus();
+    window.scrollTo({ top: $("event-form").getBoundingClientRect().top + window.scrollY - 80, behavior: "smooth" });
+  }
+  function resetForm() {
+    editingId = null;
+    $("event-form").reset();
+    $("ev-startdate").value = currentDay;
+    $("ev-level").hidden = true;
+    $("ev-submit").textContent = "Adicionar tarefa";
+    $("ev-cancel").hidden = true;
+  }
+
   async function addEvent(e) {
     e.preventDefault();
     const title = $("ev-title").value.trim();
@@ -686,7 +722,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     try {
       const { data: userData } = await sb.auth.getUser();
       if (!userData || !userData.user) throw new Error("sem sessão");
-      const { error } = await sb.from("planner_events").insert({
+      const fields = {
         user_id: userData.user.id,
         title: title,
         start_time: start,
@@ -697,7 +733,10 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         kind: kind,
         is_priority: isPrio,
         priority_level: isPrio ? level : null
-      });
+      };
+      const { error } = editingId
+        ? await sb.from("planner_events").update(fields).eq("id", editingId)
+        : await sb.from("planner_events").insert(fields);
       if (error) throw error;
       $("ev-title").value = "";
       $("ev-start").value = "";
@@ -709,7 +748,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       $("ev-startdate").value = currentDay;
       $("ev-level").hidden = true;
       await loadEvents();
-      setStatus("Compromisso adicionado");
+      resetForm();
+      setStatus("Tarefa salva");
     } catch (err) {
       setStatus("Não foi possível adicionar o compromisso");
     }
@@ -787,6 +827,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   $("next").addEventListener("click", () => changeDay(shiftDay(currentDay, 1)));
   $("today").addEventListener("click", () => changeDay(todayStr()));
   $("event-form").addEventListener("submit", addEvent);
+  $("ev-cancel").addEventListener("click", resetForm);
   $("ev-priority").addEventListener("change", () => { $("ev-level").hidden = !$("ev-priority").checked; });
 
   window.addEventListener("online", () => { if (!saveTimer) saveDay(); });
