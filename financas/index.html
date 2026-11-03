@@ -150,7 +150,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
             <input id="f-who" type="text">
           </label>
           <label>Categoria
-            <input id="f-cat" type="text" list="cats">
+            <select id="f-cat"></select>
+            <input id="f-cat-new" type="text" placeholder="Nome da nova categoria" hidden>
           </label>
           <label>Valor total
             <input id="f-amount" type="text" inputmode="decimal" placeholder="0,00" required>
@@ -192,7 +193,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
             <input id="cx-who" type="text">
           </label>
           <label>Categoria
-            <input id="cx-cat" type="text" list="cats">
+            <select id="cx-cat"></select>
+            <input id="cx-cat-new" type="text" placeholder="Nome da nova categoria" hidden>
           </label>
           <label>Valor
             <input id="cx-amount" type="text" inputmode="decimal" placeholder="0,00" required>
@@ -282,7 +284,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   let entries = [], payments = {};         // contas a pagar/receber e baixas
   let movements = [];                      // lançamentos de caixa
   let ledger = [];
-  let openings = {};                       // saldo inicial por mês: { "AAAA-MM": centavos }                         // visão unificada (caixa + baixas)
+  let openings = {};                       // saldo inicial por mês: { "AAAA-MM": centavos }
+  let categories = [];                     // nomes das categorias do usuário
   let payOpenId = null, editId = null, cxEditId = null;
 
   // ---------- utilidades ----------
@@ -380,6 +383,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   // ---------- dados ----------
   async function load() {
     setStatus("Carregando…");
+    await loadCats();
     const [e, p, m, l] = await Promise.all([
       sb.from("fin_entries").select("*").order("due_date", { ascending: true }),
       sb.from("fin_payments").select("*").order("paid_on", { ascending: true }),
@@ -872,6 +876,69 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   }
   $("fx-open").addEventListener("change", () => saveOpening($("fx-open").value));
 
+  // ---------- categorias (lista salva no banco; "+ Nova categoria" cria uma) ----------
+  const DEFAULT_FIN_CATS = [
+    "Moradia", "Educação", "Cartões", "Empréstimos", "Encargos e Seguros", "Carro", "Outros",
+    "Alimentação", "Saúde", "Lazer", "Assinaturas", "Impostos",
+    "Receitas", "Salário", "Benefícios", "Renda extra", "Prestação de serviços"
+  ];
+  async function loadCats() {
+    const { data, error } = await sb.from("fin_categories").select("name").order("name", { ascending: true });
+    if (error) return;
+    if (!data.length) {
+      const { data: u } = await sb.auth.getUser();
+      const { error: insErr } = await sb.from("fin_categories")
+        .insert(DEFAULT_FIN_CATS.map((name) => ({ user_id: u.user.id, name: name })));
+      if (insErr) return;
+      return loadCats();
+    }
+    categories = data.map((x) => x.name);
+    fillCatSelect("f-cat");
+    fillCatSelect("cx-cat");
+  }
+  function fillCatSelect(id) {
+    const sel = $(id);
+    const cur = sel.value;
+    sel.textContent = "";
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "Sem categoria";
+    sel.append(none);
+    categories.forEach((n) => {
+      const o = document.createElement("option");
+      o.value = n;
+      o.textContent = n;
+      sel.append(o);
+    });
+    const nw = document.createElement("option");
+    nw.value = "__new__";
+    nw.textContent = "+ Nova categoria…";
+    sel.append(nw);
+    sel.value = cur;
+  }
+  // Valor escolhido no seletor, ou o nome digitado quando for "Nova categoria"
+  function catValue(selId, newId) {
+    const v = $(selId).value;
+    if (v === "__new__") return $(newId).value.trim() || null;
+    return v || null;
+  }
+  async function ensureCat(name) {
+    if (!name || categories.includes(name)) return;
+    const { data: u } = await sb.auth.getUser();
+    await sb.from("fin_categories").insert({ user_id: u.user.id, name: name });
+    categories.push(name);
+    categories.sort((a, b) => a.localeCompare(b));
+  }
+  // Mostra no seletor a categoria de um lançamento, mesmo que ela não esteja na lista
+  function pickCat(selId, newId, value) {
+    if (value && !categories.includes(value)) categories.push(value);
+    fillCatSelect(selId);
+    $(selId).value = value || "";
+    $(newId).hidden = true;
+  }
+  $("f-cat").addEventListener("change", () => { $("f-cat-new").hidden = $("f-cat").value !== "__new__"; });
+  $("cx-cat").addEventListener("change", () => { $("cx-cat-new").hidden = $("cx-cat").value !== "__new__"; });
+
   // ---------- ações: contas ----------
   async function registerPayment(en, s, value, paidOn) {
     const c = toCents(value);
@@ -913,6 +980,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     editId = null;
     $("form").reset();
     $("f-n").value = "1";
+    $("f-cat-new").hidden = true;
     $("form").hidden = true;
   }
   function newEntry() {
@@ -927,7 +995,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     $("f-kind").value = en.kind;
     $("f-desc").value = en.description;
     $("f-who").value = en.counterparty || "";
-    $("f-cat").value = en.category || "";
+    pickCat("f-cat", "f-cat-new", en.category);
     $("f-amount").value = (toCents(en.amount) / 100).toFixed(2).replace(".", ",");
     $("f-due").value = en.due_date;
     $("f-notes").value = en.notes || "";
@@ -941,7 +1009,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     const kind = $("f-kind").value;
     const description = $("f-desc").value.trim();
     const counterparty = $("f-who").value.trim() || null;
-    const category = $("f-cat").value.trim() || null;
+    const category = catValue("f-cat", "f-cat-new");
+    await ensureCat(category);
     const due = $("f-due").value;
     const notes = $("f-notes").value.trim() || null;
     const n = Math.floor(Number($("f-n").value));
@@ -985,6 +1054,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   function resetCaixaForm() {
     cxEditId = null;
     $("cx-form").reset();
+    $("cx-cat-new").hidden = true;
     $("cx-tipo").value = "saida";
     $("cx-date").value = todayStr();
     $("cx-title").textContent = "Novo lançamento de caixa";
@@ -996,7 +1066,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     $("cx-tipo").value = m.tipo;
     $("cx-desc").value = m.description;
     $("cx-who").value = m.counterparty || "";
-    $("cx-cat").value = m.category || "";
+    pickCat("cx-cat", "cx-cat-new", m.category);
     $("cx-amount").value = (toCents(m.amount) / 100).toFixed(2).replace(".", ",");
     $("cx-date").value = m.data;
     $("cx-notes").value = m.notes || "";
@@ -1025,11 +1095,12 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
       tipo: $("cx-tipo").value,
       description,
       counterparty: $("cx-who").value.trim() || null,
-      category: $("cx-cat").value.trim() || null,
+      category: catValue("cx-cat", "cx-cat-new"),
       amount: (c / 100).toFixed(2),
       data,
       notes: $("cx-notes").value.trim() || null
     };
+    await ensureCat(row.category);
     let res;
     if (cxEditId) {
       res = await sb.from("fin_movements").update(row).eq("id", cxEditId);
