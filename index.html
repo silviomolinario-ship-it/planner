@@ -150,12 +150,12 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 4px 10px;
   padding: 4px 0;
   border-bottom: 1px dashed var(--line);
 }
 .hour:last-child { border-bottom: none; }
-.hour time { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }
+.hour time { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); align-self: start; padding-top: 10px; }
 .hour input {
   background: transparent;
   border: none;
@@ -165,6 +165,25 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   box-sizing: border-box;
 }
 .hour input:focus-visible { border-radius: 4px; }
+
+/* Compromissos dentro da grade */
+.hour-events { grid-column: 2; display: grid; gap: 4px; min-width: 0; }
+.hour-events:empty { display: none; }
+.hevent {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 13px;
+  min-width: 0;
+}
+.hevent input[type="checkbox"] { width: 18px; height: 18px; margin: 0; }
+.hevent span { overflow-wrap: anywhere; }
+.hevent.done span { text-decoration: line-through; color: var(--muted); }
 
 .side { display: grid; gap: 14px; min-width: 0; }
 .card {
@@ -196,7 +215,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .prio-row input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
 .prio-row input[type="text"] { background: transparent; border: none; border-bottom: 1px dashed var(--line); border-radius: 0; padding: 6px 2px; }
 
-/* Compromissos */
+/* Compromissos (lista de gerenciamento) */
 .event-row {
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr) auto;
@@ -325,6 +344,14 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   const dateEl = $("date");
   const listEl = $("events-list");
 
+  // Uma caixa de compromissos dentro de cada linha de horário (ex.: 06 → 06:00).
+  document.querySelectorAll(".hour").forEach((row) => {
+    const box = document.createElement("div");
+    box.className = "hour-events";
+    box.dataset.hour = row.querySelector("time").textContent.slice(0, 2);
+    row.append(box);
+  });
+
   let currentDay = todayStr();
   let saveTimer = null;
   let loadToken = 0;
@@ -389,9 +416,74 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   function repeatLabel(rule) {
     return { none: "", daily: "todos os dias", weekdays: "dias úteis", weekly: "semanal" }[rule] || "";
   }
+  function timeRange(ev) {
+    return ev.start_time.slice(0, 5) + (ev.end_time ? " – " + ev.end_time.slice(0, 5) : "");
+  }
+
+  function toggleDone(ev, checked) {
+    if (checked) doneEvents[ev.id] = true; else delete doneEvents[ev.id];
+    scheduleSave();
+    renderEvents();
+  }
+
+  // Item dentro da grade de horários
+  function agendaItem(ev) {
+    const wrap = document.createElement("div");
+    wrap.className = "hevent" + (doneEvents[ev.id] ? " done" : "");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!doneEvents[ev.id];
+    cb.setAttribute("aria-label", "Concluído: " + ev.title);
+    cb.addEventListener("change", () => toggleDone(ev, cb.checked));
+    const label = document.createElement("span");
+    label.textContent = timeRange(ev) + "  " + ev.title;
+    wrap.append(cb, label);
+    return wrap;
+  }
+
+  // Linha da lista de gerenciamento (com excluir)
+  function listRow(ev) {
+    const row = document.createElement("div");
+    row.className = "event-row";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!doneEvents[ev.id];
+    cb.setAttribute("aria-label", "Concluído: " + ev.title);
+    cb.addEventListener("change", () => toggleDone(ev, cb.checked));
+
+    const text = document.createElement("div");
+    text.className = "event-text";
+    text.append(timeRange(ev) + "  " + ev.title);
+    const rep = repeatLabel(ev.repeat_rule);
+    if (rep) {
+      const small = document.createElement("small");
+      small.textContent = "Repete: " + rep;
+      text.append(small);
+    }
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "ghost";
+    del.textContent = "Excluir série";
+    del.addEventListener("click", () => {
+      if (!del.dataset.armed) {
+        del.dataset.armed = "1";
+        del.textContent = "Confirmar";
+        setTimeout(() => { delete del.dataset.armed; del.textContent = "Excluir série"; }, 4000);
+        return;
+      }
+      deleteEvent(ev);
+    });
+
+    row.append(cb, text, del);
+    return row;
+  }
 
   function renderEvents() {
+    document.querySelectorAll(".hour-events").forEach((box) => { box.textContent = ""; });
     listEl.textContent = "";
+
     const todays = events
       .filter((ev) => occurs(ev, currentDay))
       .sort((a, b) => a.start_time.localeCompare(b.start_time));
@@ -405,45 +497,9 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     }
 
     todays.forEach((ev) => {
-      const row = document.createElement("div");
-      row.className = "event-row";
-
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.checked = !!doneEvents[ev.id];
-      cb.setAttribute("aria-label", "Concluído: " + ev.title);
-      cb.addEventListener("change", () => {
-        if (cb.checked) doneEvents[ev.id] = true; else delete doneEvents[ev.id];
-        scheduleSave();
-      });
-
-      const text = document.createElement("div");
-      text.className = "event-text";
-      const range = ev.start_time.slice(0, 5) + (ev.end_time ? " – " + ev.end_time.slice(0, 5) : "");
-      text.append(range + "  " + ev.title);
-      const rep = repeatLabel(ev.repeat_rule);
-      if (rep) {
-        const small = document.createElement("small");
-        small.textContent = "Repete: " + rep;
-        text.append(small);
-      }
-
-      const del = document.createElement("button");
-      del.type = "button";
-      del.className = "ghost";
-      del.textContent = "Excluir série";
-      del.addEventListener("click", () => {
-        if (!del.dataset.armed) {
-          del.dataset.armed = "1";
-          del.textContent = "Confirmar";
-          setTimeout(() => { delete del.dataset.armed; del.textContent = "Excluir série"; }, 4000);
-          return;
-        }
-        deleteEvent(ev);
-      });
-
-      row.append(cb, text, del);
-      listEl.append(row);
+      const box = document.querySelector('.hour-events[data-hour="' + ev.start_time.slice(0, 2) + '"]');
+      if (box) box.append(agendaItem(ev));
+      listEl.append(listRow(ev));
     });
   }
 
