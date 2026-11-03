@@ -552,6 +552,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     }
     parts.actions.push(btn("Editar", () => startEdit(en)));
     if (s.st !== "cancelado") parts.actions.push(armedBtn("Cancelar lançamento", () => cancelEntry(en)));
+    if (!en.virtual) parts.actions.push(armedBtn("Excluir lançamento", () => deleteEntry(en)));
     const row = item(parts);
 
     if (payOpenId === en.id) row.append(payForm(en, s));
@@ -1034,6 +1035,16 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     if (error) { setStatus("Não foi possível excluir a baixa"); return; }
     await load();
     setStatus("Baixa excluída");
+  }
+
+  // Exclusão definitiva: remove também as baixas do lançamento
+  async function deleteEntry(en) {
+    const { error: pErr } = await sb.from("fin_payments").delete().eq("entry_id", en.id);
+    if (pErr) { setStatus("Não foi possível excluir as baixas: " + pErr.message); return; }
+    const { error } = await sb.from("fin_entries").delete().eq("id", en.id);
+    if (error) { setStatus("Não foi possível excluir: " + error.message); return; }
+    await load();
+    setStatus("Lançamento excluído");
   }
 
   async function cancelEntry(en) {
