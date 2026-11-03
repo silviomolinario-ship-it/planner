@@ -559,7 +559,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     cb.setAttribute("aria-label", "Concluído: " + ev.title);
     cb.addEventListener("change", () => toggleDone(ev, cb.checked));
     const label = document.createElement("span");
-    label.textContent = (ev.kind === "reuniao" ? "Reunião · " : "") + (ev.is_priority ? LEVELS[ev.priority_level].label + " · " : "") + timeRange(ev.start_time, ev.end_time) + "  " + ev.title;
+    label.textContent = (catById(ev.category_id) ? catById(ev.category_id).name + " · " : "") + (ev.kind === "reuniao" ? "Reunião · " : "") +(ev.is_priority ? LEVELS[ev.priority_level].label + " · " : "") + timeRange(ev.start_time, ev.end_time) + "  " + ev.title;
     const cat = catById(ev.category_id);
     if (cat) wrap.style.borderLeftColor = cat.color;
     wrap.append(cb, label);
@@ -637,7 +637,13 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     { name: "Projetos", color: "#8a5cc2" },
     { name: "Igreja", color: "#e67e22" }
   ];
-  async function loadCategories() {
+  // Uma carga por vez: evita semear as categorias padrão duas vezes ao entrar
+  let catPromise = null;
+  function loadCategories() {
+    if (!catPromise) catPromise = doLoadCategories().finally(() => { catPromise = null; });
+    return catPromise;
+  }
+  async function doLoadCategories() {
     try {
       const { data, error } = await sb.from("planner_categories").select("*").order("created_at", { ascending: true });
       if (error) throw error;
@@ -646,7 +652,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         const { error: insErr } = await sb.from("planner_categories")
           .insert(DEFAULT_CATS.map((c) => Object.assign({ user_id: userData.user.id }, c)));
         if (insErr) throw insErr;
-        return loadCategories();
+        return doLoadCategories();
       }
       categories = data;
     } catch (e) {
