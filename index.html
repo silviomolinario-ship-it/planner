@@ -1,0 +1,422 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Planner Diário</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: cabeçalho com data, grade de horas à esquerda, cartões à direita. */
+:root {
+  --bg: #f6f4ef;
+  --paper: #ffffff;
+  --ink: #1f2430;
+  --muted: #6b7180;
+  --line: #d9d6cc;
+  --accent: #2f6f6a;
+  --soft-yellow: #fbf1c4;
+  --soft-pink: #f7dbe3;
+  --soft-blue: #dfe6f7;
+  --soft-red: #f3d3cc;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161a22;
+    --paper: #1f2430;
+    --ink: #eceae3;
+    --muted: #9aa1b2;
+    --line: #3a4150;
+    --accent: #7fc4bd;
+    --soft-yellow: #3a3620;
+    --soft-pink: #3a2630;
+    --soft-blue: #242c40;
+    --soft-red: #3a2521;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161a22;
+  --paper: #1f2430;
+  --ink: #eceae3;
+  --muted: #9aa1b2;
+  --line: #3a4150;
+  --accent: #7fc4bd;
+  --soft-yellow: #3a3620;
+  --soft-pink: #3a2630;
+  --soft-blue: #242c40;
+  --soft-red: #3a2521;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Manrope", system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px;
+  box-sizing: border-box;
+}
+[hidden] { display: none !important; }
+button, input, textarea { font: inherit; color: inherit; }
+button {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+button:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--paper);
+  font-weight: 700;
+}
+
+/* Login */
+#auth {
+  max-width: 360px;
+  margin: 12vh auto 0;
+  display: grid;
+  gap: 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+}
+#auth h1 { margin: 0; font-size: 20px; font-weight: 800; }
+#auth p { margin: 0; color: var(--muted); font-size: 14px; text-wrap: balance; }
+input[type="email"], input[type="text"], input[type="date"], input[type="number"], textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+/* Cabeçalho */
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.date-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--soft-blue);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 12px;
+  min-width: 0;
+}
+.date-field span { font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; font-size: 12px; }
+.date-field input { background: transparent; border: none; padding: 4px; width: auto; min-width: 0; }
+.spacer { flex: 1; }
+.status { color: var(--muted); font-size: 13px; }
+
+/* Grade */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+@media (min-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+}
+.hours {
+  background: var(--soft-yellow);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 14px;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.hour {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.hour:last-child { border-bottom: none; }
+.hour time { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }
+.hour input {
+  background: transparent;
+  border: none;
+  padding: 6px 2px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.hour input:focus-visible { border-radius: 4px; }
+
+.side { display: grid; gap: 14px; min-width: 0; }
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-width: 0;
+}
+.card h2 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.card.reminders { background: var(--soft-pink); }
+.card.prios { background: var(--soft-blue); }
+.card.notas { background: var(--soft-red); }
+.card textarea { background: var(--paper); min-height: 110px; resize: vertical; }
+.prio-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.prio-row input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
+.prio-row input[type="text"] { background: transparent; border: none; border-bottom: 1px dashed var(--line); border-radius: 0; padding: 6px 2px; }
+</style>
+
+<main>
+  <section id="auth" hidden>
+    <h1>Planner Diário</h1>
+    <p>Digite seu e-mail. Você recebe um código de 6 dígitos para entrar. A mesma conta funciona no iPad, Mac e iPhone.</p>
+    <input id="email" type="email" placeholder="seu@email.com" autocomplete="email">
+    <button id="send-code" class="primary" type="button">Enviar código</button>
+    <input id="code" type="text" inputmode="numeric" maxlength="6" placeholder="Código de 6 dígitos" autocomplete="one-time-code" hidden>
+    <button id="verify" class="primary" type="button" hidden>Entrar</button>
+    <p id="auth-msg" role="status"></p>
+  </section>
+
+  <section id="app" hidden>
+    <header class="top">
+      <button id="prev" type="button" aria-label="Dia anterior">‹</button>
+      <label class="date-field">
+        <span>Data</span>
+        <input id="date" type="date" aria-label="Escolher data">
+      </label>
+      <button id="next" type="button" aria-label="Próximo dia">›</button>
+      <button id="today" type="button">Hoje</button>
+      <span class="spacer"></span>
+      <span id="status" class="status" role="status"></span>
+      <button id="logout" type="button">Sair</button>
+    </header>
+
+    <div class="grid">
+      <section class="hours" aria-label="Horários">
+        <div class="hour"><time>06:00</time><input data-field="h06" aria-label="06:00"></div>
+        <div class="hour"><time>07:00</time><input data-field="h07" aria-label="07:00"></div>
+        <div class="hour"><time>08:00</time><input data-field="h08" aria-label="08:00"></div>
+        <div class="hour"><time>09:00</time><input data-field="h09" aria-label="09:00"></div>
+        <div class="hour"><time>10:00</time><input data-field="h10" aria-label="10:00"></div>
+        <div class="hour"><time>11:00</time><input data-field="h11" aria-label="11:00"></div>
+        <div class="hour"><time>12:00</time><input data-field="h12" aria-label="12:00"></div>
+        <div class="hour"><time>13:00</time><input data-field="h13" aria-label="13:00"></div>
+        <div class="hour"><time>14:00</time><input data-field="h14" aria-label="14:00"></div>
+        <div class="hour"><time>15:00</time><input data-field="h15" aria-label="15:00"></div>
+        <div class="hour"><time>16:00</time><input data-field="h16" aria-label="16:00"></div>
+        <div class="hour"><time>17:00</time><input data-field="h17" aria-label="17:00"></div>
+        <div class="hour"><time>18:00</time><input data-field="h18" aria-label="18:00"></div>
+        <div class="hour"><time>19:00</time><input data-field="h19" aria-label="19:00"></div>
+        <div class="hour"><time>20:00</time><input data-field="h20" aria-label="20:00"></div>
+        <div class="hour"><time>21:00</time><input data-field="h21" aria-label="21:00"></div>
+        <div class="hour"><time>22:00</time><input data-field="h22" aria-label="22:00"></div>
+      </section>
+
+      <div class="side">
+        <section class="card reminders">
+          <h2>Lembretes</h2>
+          <textarea data-field="lembretes" aria-label="Lembretes"></textarea>
+        </section>
+        <section class="card prios">
+          <h2>Prioridades</h2>
+          <div class="prio-row"><input type="checkbox" data-check="p0" aria-label="Prioridade 1 concluída"><input type="text" data-field="p0" aria-label="Prioridade 1"></div>
+          <div class="prio-row"><input type="checkbox" data-check="p1" aria-label="Prioridade 2 concluída"><input type="text" data-field="p1" aria-label="Prioridade 2"></div>
+          <div class="prio-row"><input type="checkbox" data-check="p2" aria-label="Prioridade 3 concluída"><input type="text" data-field="p2" aria-label="Prioridade 3"></div>
+          <div class="prio-row"><input type="checkbox" data-check="p3" aria-label="Prioridade 4 concluída"><input type="text" data-field="p3" aria-label="Prioridade 4"></div>
+          <div class="prio-row"><input type="checkbox" data-check="p4" aria-label="Prioridade 5 concluída"><input type="text" data-field="p4" aria-label="Prioridade 5"></div>
+          <div class="prio-row"><input type="checkbox" data-check="p5" aria-label="Prioridade 6 concluída"><input type="text" data-field="p5" aria-label="Prioridade 6"></div>
+          <div class="prio-row"><input type="checkbox" data-check="p6" aria-label="Prioridade 7 concluída"><input type="text" data-field="p6" aria-label="Prioridade 7"></div>
+        </section>
+        <section class="card notas">
+          <h2>Notas</h2>
+          <textarea data-field="notas" aria-label="Notas"></textarea>
+        </section>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(function () {
+  const SUPABASE_URL = "https://llfthqksekwgxczihpdh.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_Fs2Rdx-h_kuMW-fUnZRj2g_d5It1BgM";
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const $ = (id) => document.getElementById(id);
+  const authEl = $("auth"), appEl = $("app");
+  const statusEl = $("status"), authMsg = $("auth-msg");
+  const dateEl = $("date");
+
+  let currentDay = todayStr();
+  let saveTimer = null;
+  let loadToken = 0;
+  let suppressSave = false;
+
+  function todayStr() {
+    return new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD no fuso local
+  }
+  function shiftDay(day, n) {
+    const d = new Date(day + "T12:00:00");
+    d.setDate(d.getDate() + n);
+    return d.toLocaleDateString("en-CA");
+  }
+
+  function emptyData() {
+    return { fields: {}, checks: {} };
+  }
+  function collect() {
+    const data = emptyData();
+    document.querySelectorAll("[data-field]").forEach((el) => { data.fields[el.dataset.field] = el.value; });
+    document.querySelectorAll("[data-check]").forEach((el) => { data.checks[el.dataset.check] = el.checked; });
+    return data;
+  }
+  function fill(data) {
+    suppressSave = true;
+    const d = data || emptyData();
+    document.querySelectorAll("[data-field]").forEach((el) => { el.value = (d.fields && d.fields[el.dataset.field]) || ""; });
+    document.querySelectorAll("[data-check]").forEach((el) => { el.checked = !!(d.checks && d.checks[el.dataset.check]); });
+    suppressSave = false;
+  }
+
+  function cacheKey(day) { return "planner-cache:" + day; }
+  function readCache(day) {
+    try { const raw = localStorage.getItem(cacheKey(day)); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  }
+  function writeCache(day, data) {
+    try { localStorage.setItem(cacheKey(day), JSON.stringify(data)); } catch (e) {}
+  }
+
+  function setStatus(text) { statusEl.textContent = text; }
+
+  async function loadDay(day) {
+    const token = ++loadToken;
+    dateEl.value = day;
+    const cached = readCache(day);
+    fill(cached);
+    setStatus("Carregando…");
+    try {
+      const { data, error } = await sb.from("planner_days").select("data").eq("day", day).maybeSingle();
+      if (token !== loadToken) return;
+      if (error) throw error;
+      const remote = data ? data.data : null;
+      fill(remote || cached);
+      writeCache(day, remote || cached || emptyData());
+      setStatus("Sincronizado");
+    } catch (e) {
+      if (token !== loadToken) return;
+      setStatus("Sem conexão: usando cópia local");
+    }
+  }
+
+  async function saveDay() {
+    const day = currentDay;
+    const data = collect();
+    writeCache(day, data);
+    setStatus("Salvando…");
+    try {
+      const { data: userData } = await sb.auth.getUser();
+      if (!userData || !userData.user) throw new Error("sem sessão");
+      const { error } = await sb.from("planner_days").upsert(
+        { user_id: userData.user.id, day: day, data: data, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,day" }
+      );
+      if (error) throw error;
+      setStatus("Salvo");
+    } catch (e) {
+      setStatus("Salvo localmente. Será enviado quando houver conexão.");
+    }
+  }
+
+  function scheduleSave() {
+    if (suppressSave) return;
+    clearTimeout(saveTimer);
+    setStatus("Editando…");
+    saveTimer = setTimeout(saveDay, 600);
+  }
+
+  function changeDay(day) {
+    if (day === currentDay && dateEl.value === day) return;
+    currentDay = day;
+    loadDay(day);
+  }
+
+  document.querySelectorAll("[data-field], [data-check]").forEach((el) => {
+    el.addEventListener(el.type === "checkbox" ? "change" : "input", scheduleSave);
+  });
+  dateEl.addEventListener("change", () => { if (dateEl.value) changeDay(dateEl.value); });
+  $("prev").addEventListener("click", () => changeDay(shiftDay(currentDay, -1)));
+  $("next").addEventListener("click", () => changeDay(shiftDay(currentDay, 1)));
+  $("today").addEventListener("click", () => changeDay(todayStr()));
+
+  window.addEventListener("online", () => { if (!saveTimer) saveDay(); });
+
+  // Login por código de 6 dígitos (sem redirecionamento)
+  const emailEl = $("email"), codeEl = $("code");
+  emailEl.value = localStorage.getItem("planner-email") || "";
+
+  $("send-code").addEventListener("click", async () => {
+    const email = emailEl.value.trim();
+    if (!email) { authMsg.textContent = "Digite seu e-mail."; return; }
+    authMsg.textContent = "Enviando código…";
+    const { error } = await sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } });
+    if (error) { authMsg.textContent = "Não foi possível enviar: " + error.message; return; }
+    localStorage.setItem("planner-email", email);
+    codeEl.hidden = false;
+    $("verify").hidden = false;
+    authMsg.textContent = "Confira seu e-mail e digite o código.";
+    codeEl.focus();
+  });
+
+  $("verify").addEventListener("click", async () => {
+    const email = emailEl.value.trim();
+    const token = codeEl.value.trim();
+    if (!token) { authMsg.textContent = "Digite o código."; return; }
+    const { error } = await sb.auth.verifyOtp({ email: email, token: token, type: "email" });
+    if (error) { authMsg.textContent = "Código inválido ou expirado."; }
+  });
+
+  $("logout").addEventListener("click", async () => { await sb.auth.signOut(); });
+
+  function showApp(on) {
+    authEl.hidden = on;
+    appEl.hidden = !on;
+  }
+
+  sb.auth.onAuthStateChange((event, session) => {
+    if (session) {
+      showApp(true);
+      loadDay(currentDay);
+    } else {
+      showApp(false);
+    }
+  });
+
+  sb.auth.getSession().then(({ data }) => {
+    if (!data.session) showApp(false);
+  });
+})();
+</script>
