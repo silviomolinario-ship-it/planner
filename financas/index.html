@@ -159,6 +159,15 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
           <label>Vencimento (1ª parcela)
             <input id="f-due" type="date" required>
           </label>
+          <label id="f-rec-wrap">Repetição
+            <select id="f-rec">
+              <option value="none">Não repete</option>
+              <option value="monthly">Mensal (sem desdobrar)</option>
+            </select>
+          </label>
+          <label id="f-rec-end-wrap" hidden>Repetir até (opcional)
+            <input id="f-rec-end" type="date">
+          </label>
           <label id="f-n-wrap">Parcelas
             <input id="f-n" type="number" min="1" max="360" value="1">
           </label>
@@ -172,6 +181,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
         </form>
 
         <div id="list"></div>
+        <div id="rec-list"></div>
       </div>
     </div>
 
@@ -281,7 +291,9 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   let tab = "pagar";                       // contas: pagar | receber
   let movTipo = "todas", movOrigem = "todas";
   let month = todayStr().slice(0, 7);      // mês exibido (AAAA-MM)
-  let entries = [], payments = {};         // contas a pagar/receber e baixas
+  let realEntries = [], recurrences = [];  // lançamentos gravados e regras de recorrência
+  let entries = [], payments = {};         // exibidos: gravados + ocorrências virtuais do mês
+  let editEn = null;                       // lançamento em edição (pode ser virtual)
   let movements = [];                      // lançamentos de caixa
   let ledger = [];
   let openings = {};                       // saldo inicial por mês: { "AAAA-MM": centavos }
@@ -381,34 +393,91 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   }
 
   // ---------- dados ----------
+  // Cada tabela é lida à parte: se uma falhar, as demais continuam aparecendo.
   async function load() {
     setStatus("Carregando…");
-    await loadCats();
-    const [e, p, m, l] = await Promise.all([
-      sb.from("fin_entries").select("*").order("due_date", { ascending: true }),
-      sb.from("fin_payments").select("*").order("paid_on", { ascending: true }),
-      sb.from("fin_movements").select("*").order("data", { ascending: true }),
-      sb.from("fin_ledger").select("*").order("data", { ascending: true })
-    ]);
-    const err = e.error || p.error || m.error || l.error;
-    if (err) {
-      setStatus("Não foi possível carregar. Confira se as tabelas e a visão financeira foram criadas.");
-      return;
+    const failed = [];
+    const take = (name, res) => {
+      if (res.error) { failed.push(name + ": " + res.error.message); return []; }
+      return res.data || [];
+    };
+    try {
+      await loadCats();
+      const [e, p, m, l, r, o] = await Promise.all([
+        sb.from("fin_entries").select("*").order("due_date", { ascending: true }),
+        sb.from("fin_payments").select("*").order("paid_on", { ascending: true }),
+        sb.from("fin_movements").select("*").order("data", { ascending: true }),
+        sb.from("fin_ledger").select("*").order("data", { ascending: true }),
+        sb.from("fin_recurrences").select("*").order("start_date", { ascending: true }),
+        sb.from("fin_opening_balances").select("*")
+      ]);
+      realEntries = take("fin_entries", e);
+      payments = {};
+      take("fin_payments", p).forEach((x) => { (payments[x.entry_id] = payments[x.entry_id] || []).push(x); });
+      movements = take("fin_movements", m);
+      ledger = take("fin_ledger", l);
+      recurrences = take("fin_recurrences", r);
+      openings = {};
+      take("fin_opening_balances", o).forEach((x) => { openings[x.month] = toCents(x.amount); });
+    } catch (err) {
+      failed.push("conexão: " + err.message);
     }
-    entries = e.data || [];
-    payments = {};
-    (p.data || []).forEach((x) => { (payments[x.entry_id] = payments[x.entry_id] || []).push(x); });
-    movements = m.data || [];
-    ledger = l.data || [];
-    const o = await sb.from("fin_opening_balances").select("*");
-    openings = {};
-    (o.data || []).forEach((x) => { openings[x.month] = toCents(x.amount); });
-    setStatus("Sincronizado");
-    render();
+    setStatus(failed.length
+      ? "Algumas tabelas não carregaram (" + failed.join(" | ") + ")"
+      : "Sincronizado");
+    try {
+      render();
+    } catch (err) {
+      setStatus("Erro ao exibir: " + err.message);
+      console.error(err);
+    }
+  }
+
+  // Ocorrências de recorrência do mês, ainda não gravadas. Só viram lançamento ao serem usadas.
+  function virtualFor(ym) {
+    const [y, mo] = ym.split("-").map(Number);
+    const last = new Date(y, mo, 0).getDate();
+    const first = ym + "-01";
+    const lastStr = ym + "-" + String(last).padStart(2, "0");
+    const out = [];
+    recurrences.forEach((r) => {
+      if (!r.active) return;
+      if (r.start_date > lastStr) return;
+      if (r.end_date && r.end_date < first) return;
+      const due = ym + "-" + String(Math.min(r.day_of_month, last)).padStart(2, "0");
+      if (due < r.start_date) return;
+      if (r.end_date && due > r.end_date) return;
+      if (realEntries.some((en) => en.recurrence_id === r.id && en.due_date === due)) return;
+      out.push({
+        id: "v:" + r.id + ":" + due, virtual: true, recurrence_id: r.id,
+        kind: r.kind, description: r.description, counterparty: r.counterparty,
+        category: r.category, amount: r.amount, due_date: due, notes: null,
+        status: "ativo", installment_group: null
+      });
+    });
+    return out;
+  }
+
+  // Grava a ocorrência virtual como lançamento real e devolve o id (null em caso de erro).
+  async function materialize(en) {
+    if (!en.virtual) return en.id;
+    const { data: u } = await sb.auth.getUser();
+    const { data, error } = await sb.from("fin_entries").insert({
+      user_id: u.user.id, kind: en.kind, description: en.description,
+      counterparty: en.counterparty, category: en.category, notes: en.notes,
+      amount: toCents(en.amount) / 100, due_date: en.due_date,
+      recurrence_id: en.recurrence_id
+    }).select("id").single();
+    if (error) {
+      setStatus("Não foi possível salvar: " + error.message);
+      return null;
+    }
+    return data.id;
   }
 
   // ---------- telas ----------
   function render() {
+    entries = realEntries.concat(virtualFor(month));
     document.querySelectorAll("[data-view]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === view)));
     $("v-contas").hidden = view !== "contas";
     $("v-caixa").hidden = view !== "caixa";
@@ -416,7 +485,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     $("v-mensal").hidden = view !== "mensal";
     $("v-fluxo").hidden = view !== "fluxo";
     $("month").value = month;
-    if (view === "contas") renderContas();
+    if (view === "contas") { renderContas(); renderRecs(); }
     if (view === "caixa") renderCaixa();
     if (view === "mov") renderMov();
     if (view === "mensal") renderMensal();
@@ -702,9 +771,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   }
 
   async function updateEntry(en, patch) {
+    const id = await materialize(en);
+    if (!id) return;
     const { error } = await sb.from("fin_entries")
       .update(Object.assign({ updated_at: new Date().toISOString() }, patch))
-      .eq("id", en.id);
+      .eq("id", id);
     await load();
     setStatus(error ? "Não foi possível salvar: " + error.message : "Alteração salva");
   }
@@ -727,8 +798,10 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     const paid = summarize(en).paid;
     if (c === paid) return;
     if (c < paid) { setStatus("Para reduzir o realizado, exclua a baixa na tela Contas"); load(); return; }
+    const id = await materialize(en);
+    if (!id) return;
     const { error } = await sb.from("fin_payments").insert({
-      entry_id: en.id, amount: ((c - paid) / 100).toFixed(2), paid_on: todayStr()
+      entry_id: id, amount: ((c - paid) / 100).toFixed(2), paid_on: todayStr()
     });
     await load();
     setStatus(error ? "Não foi possível registrar: " + error.message : "Baixa registrada pelo realizado");
@@ -945,8 +1018,10 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     if (!(c > 0)) { setStatus("Informe um valor maior que zero"); return; }
     if (c > s.balance) { setStatus("O valor é maior que o saldo em aberto"); return; }
     if (!paidOn) { setStatus("Informe a data"); return; }
+    const id = await materialize(en);
+    if (!id) return;
     const { error } = await sb.from("fin_payments").insert({
-      entry_id: en.id, amount: (c / 100).toFixed(2), paid_on: paidOn
+      entry_id: id, amount: (c / 100).toFixed(2), paid_on: paidOn
     });
     if (error) { setStatus("Não foi possível registrar: " + error.message); return; }
     payOpenId = null;
@@ -962,22 +1037,66 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   }
 
   async function cancelEntry(en) {
+    const id = await materialize(en);
+    if (!id) return;
     const { error } = await sb.from("fin_entries")
       .update({ status: "cancelado", updated_at: new Date().toISOString() })
-      .eq("id", en.id);
+      .eq("id", id);
     if (error) { setStatus("Não foi possível cancelar"); return; }
     await load();
     setStatus("Lançamento cancelado");
   }
 
+  // Recorrências: lista e encerramento
+  function renderRecs() {
+    const box = $("rec-list");
+    box.textContent = "";
+    const act = recurrences.filter((r) => r.active && r.kind === tab);
+    if (!act.length) return;
+    const h = document.createElement("h3");
+    h.textContent = tab === "pagar" ? "Contas a pagar recorrentes" : "Contas a receber recorrentes";
+    box.append(h);
+    act.forEach((r) => {
+      box.append(item({
+        title: r.description,
+        meta: [r.counterparty, r.category, "todo dia " + r.day_of_month,
+          "desde " + fmtDate(r.start_date), r.end_date ? "até " + fmtDate(r.end_date) : "sem data final"]
+          .filter(Boolean).join(" · "),
+        amount: brl(toCents(r.amount)) + " /mês",
+        actions: [armedBtn("Encerrar", () => endRecurrence(r))]
+      }));
+    });
+  }
+  // Encerra a partir do mês exibido: ocorrências anteriores continuam, as seguintes somem.
+  async function endRecurrence(r) {
+    const [y, m] = month.split("-").map(Number);
+    const cut = new Date(y, m - 1, 0).toLocaleDateString("en-CA");
+    const { error } = r.start_date > cut
+      ? await sb.from("fin_recurrences").update({ active: false }).eq("id", r.id)
+      : await sb.from("fin_recurrences").update({ end_date: cut }).eq("id", r.id);
+    if (error) { setStatus("Não foi possível encerrar: " + error.message); return; }
+    await load();
+    setStatus("Recorrência encerrada a partir de " + fmtDate(month + "-01"));
+  }
+
+  // Campos do formulário dependem de Repetição e de estar editando
+  function syncFormFields() {
+    const mensal = $("f-rec").value === "monthly";
+    $("f-rec-wrap").hidden = !!editId;
+    $("f-rec-end-wrap").hidden = !!editId || !mensal;
+    $("f-n-wrap").hidden = !!editId || mensal;
+    $("f-submit").textContent = editId ? "Salvar alterações" : "Salvar";
+  }
+  $("f-rec").addEventListener("change", syncFormFields);
+
   function openForm() {
     $("form").hidden = false;
-    $("f-submit").textContent = editId ? "Salvar alterações" : "Salvar";
-    $("f-n-wrap").hidden = !!editId;
+    syncFormFields();
     $("f-desc").focus();
   }
   function closeForm() {
     editId = null;
+    editEn = null;
     $("form").reset();
     $("f-n").value = "1";
     $("f-cat-new").hidden = true;
@@ -992,6 +1111,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   function startEdit(en) {
     closeForm();
     editId = en.id;
+    editEn = en;
     $("f-kind").value = en.kind;
     $("f-desc").value = en.description;
     $("f-who").value = en.counterparty || "";
@@ -1013,15 +1133,28 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     await ensureCat(category);
     const due = $("f-due").value;
     const notes = $("f-notes").value.trim() || null;
-    const n = Math.floor(Number($("f-n").value));
+    const mensal = !editId && $("f-rec").value === "monthly";
+    const n = mensal ? 1 : Math.floor(Number($("f-n").value));
     if (!description || !due) { setStatus("Preencha descrição e vencimento"); return; }
 
     let res;
     if (editId) {
+      const id = await materialize(editEn);
+      if (!id) return;
       res = await sb.from("fin_entries").update({
         kind, description, counterparty, category, notes, due_date: due,
         amount: (c / 100).toFixed(2), updated_at: new Date().toISOString()
-      }).eq("id", editId);
+      }).eq("id", id);
+    } else if (mensal) {
+      // Regra mensal: não cria lançamentos agora; cada mês aparece como ocorrência virtual
+      const endD = $("f-rec-end").value || null;
+      if (endD && endD < due) { setStatus("A data final deve ser depois do vencimento"); return; }
+      const { data: u } = await sb.auth.getUser();
+      res = await sb.from("fin_recurrences").insert({
+        user_id: u.user.id, kind, description, counterparty, category,
+        amount: (c / 100).toFixed(2), day_of_month: Number(due.slice(8, 10)),
+        start_date: due, end_date: endD, active: true
+      });
     } else if (n > 1) {
       // Desdobra em n parcelas mensais, a partir do vencimento informado
       if (n > 360) { setStatus("No máximo 360 parcelas"); return; }
@@ -1042,7 +1175,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     tab = kind;
     closeForm();
     await load();
-    setStatus(n > 1 && !editId ? n + " parcelas criadas" : "Lançamento salvo");
+    setStatus(mensal ? "Repetição mensal criada"
+      : n > 1 && !editId ? n + " parcelas criadas" : "Lançamento salvo");
   });
   $("f-cancel").addEventListener("click", closeForm);
   $("new-btn").addEventListener("click", newEntry);
