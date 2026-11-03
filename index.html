@@ -166,7 +166,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 }
 .hour input:focus-visible { border-radius: 4px; }
 
-/* Compromissos e prioridades dentro da grade */
+/* Blocos de compromissos e prioridades dentro da grade */
 .hour-events { grid-column: 2; display: grid; gap: 4px; min-width: 0; }
 .hour-events:empty { display: none; }
 .hevent {
@@ -174,16 +174,18 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   grid-template-columns: 18px minmax(0, 1fr);
   gap: 8px;
   align-items: center;
-  background: var(--paper);
-  border: 1px solid var(--line);
+  background: var(--soft-blue);
+  border-left: 4px solid var(--accent);
   border-radius: 8px;
   padding: 5px 8px;
   font-size: 13px;
   min-width: 0;
 }
+.hevent.prio { background: var(--soft-pink); border-left-color: var(--ink); }
 .hevent input[type="checkbox"] { width: 18px; height: 18px; margin: 0; }
 .hevent span { overflow-wrap: anywhere; }
 .hevent.done span { text-decoration: line-through; color: var(--muted); }
+.hevent.done { opacity: 0.7; }
 
 .side { display: grid; gap: 14px; min-width: 0; }
 .card {
@@ -208,14 +210,14 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .note { color: var(--muted); font-size: 12px; margin: -4px 0 10px; }
 .prio-row {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) 92px;
-  gap: 10px;
+  grid-template-columns: 22px minmax(0, 1fr) 76px 76px;
+  gap: 8px;
   align-items: center;
   margin-bottom: 8px;
 }
 .prio-row input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
 .prio-row input[type="text"] { background: transparent; border: none; border-bottom: 1px dashed var(--line); border-radius: 0; padding: 6px 2px; }
-.prio-row input[type="time"] { background: var(--paper); padding: 4px 6px; font-size: 13px; }
+.prio-row input[type="time"] { background: var(--paper); padding: 4px 4px; font-size: 13px; min-width: 0; }
 
 /* Compromissos (lista de gerenciamento) */
 .event-row {
@@ -295,14 +297,14 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         </section>
         <section class="card prios">
           <h2>Prioridades</h2>
-          <p class="note">Com horário, a prioridade também aparece na grade, com checkbox.</p>
-          <div class="prio-row"><input type="checkbox" data-check="p0" aria-label="Prioridade 1 concluída"><input type="text" data-field="p0" aria-label="Prioridade 1"><input type="time" data-field="p0t" aria-label="Horário da prioridade 1"></div>
-          <div class="prio-row"><input type="checkbox" data-check="p1" aria-label="Prioridade 2 concluída"><input type="text" data-field="p1" aria-label="Prioridade 2"><input type="time" data-field="p1t" aria-label="Horário da prioridade 2"></div>
-          <div class="prio-row"><input type="checkbox" data-check="p2" aria-label="Prioridade 3 concluída"><input type="text" data-field="p2" aria-label="Prioridade 3"><input type="time" data-field="p2t" aria-label="Horário da prioridade 3"></div>
-          <div class="prio-row"><input type="checkbox" data-check="p3" aria-label="Prioridade 4 concluída"><input type="text" data-field="p3" aria-label="Prioridade 4"><input type="time" data-field="p3t" aria-label="Horário da prioridade 4"></div>
-          <div class="prio-row"><input type="checkbox" data-check="p4" aria-label="Prioridade 5 concluída"><input type="text" data-field="p4" aria-label="Prioridade 5"><input type="time" data-field="p4t" aria-label="Horário da prioridade 5"></div>
-          <div class="prio-row"><input type="checkbox" data-check="p5" aria-label="Prioridade 6 concluída"><input type="text" data-field="p5" aria-label="Prioridade 6"><input type="time" data-field="p5t" aria-label="Horário da prioridade 6"></div>
-          <div class="prio-row"><input type="checkbox" data-check="p6" aria-label="Prioridade 7 concluída"><input type="text" data-field="p6" aria-label="Prioridade 7"><input type="time" data-field="p6t" aria-label="Horário da prioridade 7"></div>
+          <p class="note">Com início e fim, a prioridade vira um bloco na grade.</p>
+          <div class="prio-row"><input type="checkbox" data-check="p0" aria-label="Prioridade 1 concluída"><input type="text" data-field="p0" aria-label="Prioridade 1"><input type="time" data-field="p0s" aria-label="Início da prioridade 1"><input type="time" data-field="p0e" aria-label="Fim da prioridade 1"></div>
+          <div class="prio-row"><input type="checkbox" data-check="p1" aria-label="Prioridade 2 concluída"><input type="text" data-field="p1" aria-label="Prioridade 2"><input type="time" data-field="p1s" aria-label="Início da prioridade 2"><input type="time" data-field="p1e" aria-label="Fim da prioridade 2"></div>
+          <div class="prio-row"><input type="checkbox" data-check="p2" aria-label="Prioridade 3 concluída"><input type="text" data-field="p2" aria-label="Prioridade 3"><input type="time" data-field="p2s" aria-label="Início da prioridade 3"><input type="time" data-field="p2e" aria-label="Fim da prioridade 3"></div>
+          <div class="prio-row"><input type="checkbox" data-check="p3" aria-label="Prioridade 4 concluída"><input type="text" data-field="p3" aria-label="Prioridade 4"><input type="time" data-field="p3s" aria-label="Início da prioridade 4"><input type="time" data-field="p3e" aria-label="Fim da prioridade 4"></div>
+          <div class="prio-row"><input type="checkbox" data-check="p4" aria-label="Prioridade 5 concluída"><input type="text" data-field="p4" aria-label="Prioridade 5"><input type="time" data-field="p4s" aria-label="Início da prioridade 5"><input type="time" data-field="p4e" aria-label="Fim da prioridade 5"></div>
+          <div class="prio-row"><input type="checkbox" data-check="p5" aria-label="Prioridade 6 concluída"><input type="text" data-field="p5" aria-label="Prioridade 6"><input type="time" data-field="p5s" aria-label="Início da prioridade 6"><input type="time" data-field="p5e" aria-label="Fim da prioridade 6"></div>
+          <div class="prio-row"><input type="checkbox" data-check="p6" aria-label="Prioridade 7 concluída"><input type="text" data-field="p6" aria-label="Prioridade 7"><input type="time" data-field="p6s" aria-label="Início da prioridade 7"><input type="time" data-field="p6e" aria-label="Fim da prioridade 7"></div>
         </section>
 
         <section class="card compromissos">
@@ -347,7 +349,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   const dateEl = $("date");
   const listEl = $("events-list");
 
-  // Uma caixa de itens dentro de cada linha de horário (ex.: 06 → 06:00).
+  // Uma caixa de blocos dentro de cada linha de horário (ex.: 06 → 06:00).
   document.querySelectorAll(".hour").forEach((row) => {
     const box = document.createElement("div");
     box.className = "hour-events";
@@ -372,6 +374,10 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   }
   function weekdayOf(day) {
     return new Date(day + "T12:00:00").getDay();
+  }
+  function toMin(hhmm) {
+    const [h, m] = hhmm.split(":").map(Number);
+    return h * 60 + m;
   }
 
   function emptyData() {
@@ -416,11 +422,22 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     }
   }
 
+  // Intervalo em minutos. Sem fim, vale 1 hora.
+  function rangeOf(startHHMM, endHHMM) {
+    const start = toMin(startHHMM);
+    const end = endHHMM ? toMin(endHHMM) : start + 60;
+    return { start: start, end: Math.max(end, start + 15) };
+  }
+  // A linha de hora H cobre o bloco se houver sobreposição com [H:00, H+1:00).
+  function covers(hour, r) {
+    return hour * 60 < r.end && (hour + 1) * 60 > r.start;
+  }
+
   function repeatLabel(rule) {
     return { none: "", daily: "todos os dias", weekdays: "dias úteis", weekly: "semanal" }[rule] || "";
   }
-  function timeRange(ev) {
-    return ev.start_time.slice(0, 5) + (ev.end_time ? " – " + ev.end_time.slice(0, 5) : "");
+  function timeRange(startHHMM, endHHMM) {
+    return startHHMM.slice(0, 5) + (endHHMM ? " – " + endHHMM.slice(0, 5) : "");
   }
 
   function toggleDone(ev, checked) {
@@ -429,7 +446,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     renderEvents();
   }
 
-  // Item de compromisso dentro da grade
+  // Bloco de compromisso dentro de uma linha de hora
   function agendaItem(ev) {
     const wrap = document.createElement("div");
     wrap.className = "hevent" + (doneEvents[ev.id] ? " done" : "");
@@ -439,17 +456,17 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     cb.setAttribute("aria-label", "Concluído: " + ev.title);
     cb.addEventListener("change", () => toggleDone(ev, cb.checked));
     const label = document.createElement("span");
-    label.textContent = timeRange(ev) + "  " + ev.title;
+    label.textContent = timeRange(ev.start_time, ev.end_time) + "  " + ev.title;
     wrap.append(cb, label);
     return wrap;
   }
 
-  // Item de prioridade com horário dentro da grade (o checkbox é o mesmo da lista de prioridades)
-  function priorityItem(i, text, time) {
+  // Bloco de prioridade com horário dentro de uma linha de hora (o checkbox é o da lista de prioridades)
+  function priorityItem(i, text, startHHMM, endHHMM) {
     const wrap = document.createElement("div");
     const source = document.querySelector('[data-check="p' + i + '"]');
     const done = source.checked;
-    wrap.className = "hevent" + (done ? " done" : "");
+    wrap.className = "hevent prio" + (done ? " done" : "");
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.checked = done;
@@ -460,7 +477,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       renderEvents();
     });
     const label = document.createElement("span");
-    label.textContent = time.slice(0, 5) + "  " + text;
+    label.textContent = timeRange(startHHMM, endHHMM) + "  " + text;
     wrap.append(cb, label);
     return wrap;
   }
@@ -478,7 +495,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 
     const text = document.createElement("div");
     text.className = "event-text";
-    text.append(timeRange(ev) + "  " + ev.title);
+    text.append(timeRange(ev.start_time, ev.end_time) + "  " + ev.title);
     const rep = repeatLabel(ev.repeat_rule);
     if (rep) {
       const small = document.createElement("small");
@@ -508,7 +525,9 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     document.querySelectorAll(".hour-events").forEach((box) => { box.textContent = ""; });
     listEl.textContent = "";
 
-    // Compromissos
+    const boxes = Array.from(document.querySelectorAll(".hour-events"));
+
+    // Compromissos: aparecem em todas as horas que o bloco ocupa
     const todays = events
       .filter((ev) => occurs(ev, currentDay))
       .sort((a, b) => a.start_time.localeCompare(b.start_time));
@@ -521,18 +540,23 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     }
 
     todays.forEach((ev) => {
-      const box = document.querySelector('.hour-events[data-hour="' + ev.start_time.slice(0, 2) + '"]');
-      if (box) box.append(agendaItem(ev));
+      const r = rangeOf(ev.start_time, ev.end_time);
+      boxes.forEach((box) => {
+        if (covers(Number(box.dataset.hour), r)) box.append(agendaItem(ev));
+      });
       listEl.append(listRow(ev));
     });
 
-    // Prioridades com horário
+    // Prioridades com início e fim
     for (let i = 0; i < 7; i++) {
       const text = document.querySelector('[data-field="p' + i + '"]').value.trim();
-      const time = document.querySelector('[data-field="p' + i + 't"]').value;
-      if (!text || !time) continue;
-      const box = document.querySelector('.hour-events[data-hour="' + time.slice(0, 2) + '"]');
-      if (box) box.append(priorityItem(i, text, time));
+      const s = document.querySelector('[data-field="p' + i + 's"]').value;
+      const e = document.querySelector('[data-field="p' + i + 'e"]').value;
+      if (!text || !s) continue;
+      const r = rangeOf(s, e);
+      boxes.forEach((box) => {
+        if (covers(Number(box.dataset.hour), r)) box.append(priorityItem(i, text, s, e));
+      });
     }
   }
 
@@ -643,7 +667,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   document.querySelectorAll("[data-field], [data-check]").forEach((el) => {
     el.addEventListener(el.type === "checkbox" ? "change" : "input", scheduleSave);
   });
-  // Mudanças em prioridades atualizam a grade na hora
+  // Mudanças em prioridades atualizam os blocos na grade na hora
   document.querySelectorAll('[data-field^="p"], [data-check^="p"]').forEach((el) => {
     el.addEventListener(el.type === "checkbox" ? "change" : "input", renderEvents);
   });
