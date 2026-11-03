@@ -73,6 +73,19 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 24px;
 }
 #auth h1 { margin: 0; font-size: 20px; }
+.scroll { overflow-x: auto; }
+.sheet { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; min-width: 560px; margin-bottom: 18px; }
+.sheet th, .sheet td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+.sheet th { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.sheet .num { text-align: right; }
+.sheet input { background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 4px 6px; width: 100%; min-width: 0; }
+.sheet .num input { text-align: right; }
+.sheet input:focus { background: var(--card); border-color: var(--blue); }
+.sheet tr.sub td { font-weight: 700; background: #f3f6fb; }
+.sheet tr.bold td { font-weight: 800; }
+.sheet tr.add-row td { background: #fafbfd; }
+.sheet tr.add-row input { border-color: var(--line); background: var(--card); }
+.sheet .neg { color: var(--neg); }
 </style>
 </head>
 <body>
@@ -98,6 +111,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     <nav class="nav" aria-label="Telas">
       <button type="button" data-view="contas" aria-pressed="true">Contas a pagar e receber</button>
       <button type="button" data-view="caixa" aria-pressed="false">Caixa</button>
+      <button type="button" data-view="mensal" aria-pressed="false">Planilha do mês</button>
       <button type="button" data-view="mov" aria-pressed="false">Movimentações</button>
     </nav>
     <p id="status" role="status"></p>
@@ -198,6 +212,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
         <div class="totals" id="cx-totals"></div>
         <div id="cx-list"></div>
       </div>
+    </div>
+
+    <!-- PLANILHA DO MÊS (formato da aba Junho) -->
+    <div id="v-mensal" class="wrap" hidden>
+      <div class="card scroll" id="sheet"></div>
     </div>
 
     <!-- MOVIMENTAÇÕES -->
@@ -372,10 +391,12 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     $("v-contas").hidden = view !== "contas";
     $("v-caixa").hidden = view !== "caixa";
     $("v-mov").hidden = view !== "mov";
+    $("v-mensal").hidden = view !== "mensal";
     $("month").value = month;
     if (view === "contas") renderContas();
     if (view === "caixa") renderCaixa();
     if (view === "mov") renderMov();
+    if (view === "mensal") renderMensal();
   }
 
   // Contas a pagar e receber
@@ -559,6 +580,196 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
         tipo: x.tipo, description: x.description, counterparty: x.counterparty,
         category: x.category, data: x.data, amount: x.amount, notes: "conta baixada"
       }, false));
+    });
+  }
+
+  // ---------- planilha do mês (formato da aba Junho) ----------
+  // Cada conta a pagar ou receber do mês vira uma linha. O grupo é o campo categoria.
+  const GROUP_ORDER = ["Moradia", "Educação", "Cartões", "Empréstimos", "Encargos e Seguros", "Carro", "Outros"];
+
+  function monthList(kind) {
+    return entries
+      .filter((en) => en.kind === kind && en.due_date.slice(0, 7) === month && en.status !== "cancelado")
+      .sort((a, b) => a.due_date.localeCompare(b.due_date) || a.description.localeCompare(b.description));
+  }
+  function sumCents(list, f) { return list.reduce((s, en) => s + f(en), 0); }
+  function moneyText(c) { return (c / 100).toFixed(2).replace(".", ","); }
+  function dayOf(en) { return Number(en.due_date.slice(8, 10)); }
+
+  function cellInput(value, opts, onCommit) {
+    const inp = document.createElement("input");
+    inp.type = opts.type || "text";
+    if (opts.inputMode) inp.inputMode = opts.inputMode;
+    if (opts.min) inp.min = opts.min;
+    if (opts.max) inp.max = opts.max;
+    if (opts.width) inp.style.width = opts.width;
+    inp.value = value;
+    inp.setAttribute("aria-label", opts.label);
+    inp.addEventListener("change", () => onCommit(inp.value));
+    return inp;
+  }
+  function cell(content, cls) {
+    const c = document.createElement("td");
+    if (cls) c.className = cls;
+    if (typeof content === "string") c.textContent = content; else c.append(content);
+    return c;
+  }
+  function sheetTable(heads) {
+    const t = document.createElement("table");
+    t.className = "sheet";
+    const thead = document.createElement("thead");
+    const tr = document.createElement("tr");
+    heads.forEach((h, i) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      if (i > 0) th.className = "num";
+      tr.append(th);
+    });
+    thead.append(tr);
+    const tbody = document.createElement("tbody");
+    t.append(thead, tbody);
+    return { t, tbody };
+  }
+  function sheetRow(en) {
+    const s = summarize(en);
+    const tr = document.createElement("tr");
+    tr.append(
+      cell(cellInput(en.description, { label: "Descrição" },
+        (v) => updateEntry(en, { description: v.trim() || en.description }))),
+      cell(cellInput(String(dayOf(en)), { type: "number", min: 1, max: 31, width: "56px", label: "Dia" },
+        (v) => setDay(en, v)), "num"),
+      cell(cellInput(moneyText(s.total), { inputMode: "decimal", width: "110px", label: "Previsto" },
+        (v) => setPrevisto(en, v)), "num"),
+      cell(cellInput(moneyText(s.paid), { inputMode: "decimal", width: "110px", label: "Realizado" },
+        (v) => setRealizado(en, v)), "num"),
+      cell(brl(s.total - s.paid), "num " + (s.paid > s.total ? "neg" : "")),
+      cell(armedBtn("×", () => cancelEntry(en)))
+    );
+    return tr;
+  }
+  function subRow(label, prevC, realC, cls) {
+    const tr = document.createElement("tr");
+    tr.className = cls || "sub";
+    tr.append(
+      cell(label), cell(""),
+      cell(brl(prevC), "num"), cell(brl(realC), "num"), cell(brl(prevC - realC), "num"), cell("")
+    );
+    return tr;
+  }
+  function addRow(kind, group) {
+    const tr = document.createElement("tr");
+    tr.className = "add-row";
+    const desc = document.createElement("input");
+    desc.placeholder = "Novo item";
+    desc.setAttribute("aria-label", "Novo item");
+    const dia = document.createElement("input");
+    dia.type = "number"; dia.min = 1; dia.max = 31; dia.placeholder = "Dia";
+    dia.style.width = "56px";
+    dia.setAttribute("aria-label", "Dia do novo item");
+    const val = document.createElement("input");
+    val.inputMode = "decimal"; val.placeholder = "0,00";
+    val.style.width = "110px";
+    val.setAttribute("aria-label", "Valor previsto do novo item");
+    tr.append(
+      cell(desc), cell(dia, "num"), cell(val, "num"), cell(""), cell(""),
+      cell(btn("Adicionar", () => addEntry(kind, group, desc.value, dia.value, val.value), "primary"))
+    );
+    return tr;
+  }
+
+  async function updateEntry(en, patch) {
+    const { error } = await sb.from("fin_entries")
+      .update(Object.assign({ updated_at: new Date().toISOString() }, patch))
+      .eq("id", en.id);
+    await load();
+    setStatus(error ? "Não foi possível salvar: " + error.message : "Alteração salva");
+  }
+  function setDay(en, v) {
+    const dia = Math.floor(Number(v));
+    if (!(dia >= 1 && dia <= 31)) { setStatus("Dia entre 1 e 31"); load(); return; }
+    const [y, m] = month.split("-").map(Number);
+    const last = new Date(y, m, 0).getDate();
+    updateEntry(en, { due_date: month + "-" + String(Math.min(dia, last)).padStart(2, "0") });
+  }
+  function setPrevisto(en, v) {
+    const c = toCents(v);
+    if (!(c > 0)) { setStatus("Valor inválido"); load(); return; }
+    updateEntry(en, { amount: (c / 100).toFixed(2) });
+  }
+  // Realizado aumenta com uma baixa pela diferença. Para reduzir, exclua a baixa na tela Contas.
+  async function setRealizado(en, v) {
+    const c = toCents(v);
+    if (!(c >= 0)) { setStatus("Valor inválido"); load(); return; }
+    const paid = summarize(en).paid;
+    if (c === paid) return;
+    if (c < paid) { setStatus("Para reduzir o realizado, exclua a baixa na tela Contas"); load(); return; }
+    const { error } = await sb.from("fin_payments").insert({
+      entry_id: en.id, amount: ((c - paid) / 100).toFixed(2), paid_on: todayStr()
+    });
+    await load();
+    setStatus(error ? "Não foi possível registrar: " + error.message : "Baixa registrada pelo realizado");
+  }
+  async function addEntry(kind, group, description, dia, valor) {
+    description = description.trim();
+    const c = toCents(valor);
+    const d = Math.floor(Number(dia));
+    if (!description) { setStatus("Informe a descrição"); return; }
+    if (!(c > 0)) { setStatus("Informe o valor previsto"); return; }
+    if (!(d >= 1 && d <= 31)) { setStatus("Informe o dia (1 a 31)"); return; }
+    const [y, m] = month.split("-").map(Number);
+    const last = new Date(y, m, 0).getDate();
+    const { data: u } = await sb.auth.getUser();
+    const { error } = await sb.from("fin_entries").insert({
+      user_id: u.user.id, kind: kind, description: description, category: group || null,
+      amount: (c / 100).toFixed(2), due_date: month + "-" + String(Math.min(d, last)).padStart(2, "0")
+    });
+    await load();
+    setStatus(error ? "Não foi possível adicionar: " + error.message : "Item adicionado");
+  }
+
+  function renderMensal() {
+    const rec = monthList("receber"), pag = monthList("pagar");
+    const prev = (l) => sumCents(l, (en) => toCents(en.amount));
+    const real = (l) => sumCents(l, (en) => summarize(en).paid);
+    const box = $("sheet");
+    box.textContent = "";
+
+    // Resumo: receitas, despesas, resultado e divisão por dia 14/15, como na aba Junho
+    const near = pag.filter((en) => dayOf(en) < 15);
+    const far = pag.filter((en) => dayOf(en) >= 15);
+    const res = sheetTable(["Resumo", "Previsto", "Realizado"]);
+    const sumRow = (label, p, r, cls) => {
+      const tr = document.createElement("tr");
+      tr.className = cls || "";
+      tr.append(cell(label), cell(brl(p), "num"), cell(brl(r), "num"));
+      res.tbody.append(tr);
+    };
+    sumRow("Receitas", prev(rec), real(rec));
+    sumRow("Despesas", prev(pag), real(pag));
+    sumRow("Resultado", prev(rec) - prev(pag), real(rec) - real(pag), "bold");
+    sumRow("Despesas até o dia 14", prev(near), real(near));
+    sumRow("Despesas a partir do dia 15", prev(far), real(far));
+    box.append(res.t);
+
+    // Receitas
+    const rt = sheetTable(["Receitas", "Dia", "Previsto", "Realizado", "Saldo", ""]);
+    rec.forEach((en) => rt.tbody.append(sheetRow(en)));
+    rt.tbody.append(subRow("Total de receitas", prev(rec), real(rec)));
+    rt.tbody.append(addRow("receber", "Receitas"));
+    box.append(rt.t);
+
+    // Despesas, por grupo (grupos conhecidos sempre aparecem, mesmo vazios)
+    const present = [...new Set(pag.map((en) => en.category || "Sem grupo"))];
+    const groups = GROUP_ORDER.concat(present.filter((g) => !GROUP_ORDER.includes(g)));
+    groups.forEach((g) => {
+      const isEmpty = !present.includes(g);
+      if (isEmpty && GROUP_ORDER.indexOf(g) < 0) return;
+      const list = pag.filter((en) => (en.category || "Sem grupo") === g);
+      const gt = sheetTable([g, "Dia", "Previsto", "Realizado", "Saldo", ""]);
+      list.forEach((en) => gt.tbody.append(sheetRow(en)));
+      gt.tbody.append(subRow("Subtotal " + g, prev(list), real(list)));
+      gt.tbody.append(addRow("pagar", g === "Sem grupo" ? null : g));
+      box.append(gt.t);
     });
   }
 
