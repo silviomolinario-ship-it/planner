@@ -260,6 +260,19 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 #cats-screen { max-width: 640px; margin: 0 auto; }
 #cats-screen .card { display: grid; gap: 12px; }
 .screen-title { margin: 0; font-size: 18px; font-weight: 800; }
+#dash-screen { max-width: 720px; margin: 0 auto; }
+#dash-screen .card { display: grid; gap: 8px; }
+.total { margin: 0 0 4px; font-weight: 800; font-size: 16px; }
+.cat-group { border-bottom: 1px solid var(--line); padding: 4px 0; }
+.cat-group:last-child { border-bottom: none; }
+.cat-head { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: none; padding: 8px 0; cursor: pointer; text-align: left; }
+.cat-head .label { font-weight: 800; min-width: 110px; }
+.bar { flex: 1; height: 12px; background: var(--soft-blue); border-radius: 6px; overflow: hidden; min-width: 40px; }
+.bar > span { display: block; height: 100%; }
+.cat-head .time, .task-row .time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.task-rows { display: grid; gap: 6px; padding: 2px 0 8px 14px; }
+.task-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.task-row .name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .timer { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .clock { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); margin-right: 4px; }
 .timer small { color: var(--muted); font-size: 12px; }
@@ -301,6 +314,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
+      <button id="open-dash" type="button">Dashboard</button>
       <button id="open-cats" type="button">Categorias</button>
       <button id="logout" type="button">Sair</button>
     </header>
@@ -404,6 +418,23 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         <div id="cat-palette"></div>
         <button id="cat-add" type="button" class="primary">Criar categoria</button>
       </div>
+    </div>
+  </section>
+
+  <section id="dash-screen" hidden>
+    <header class="top">
+      <button id="dash-back" type="button">‹ Voltar</button>
+      <h1 class="screen-title">Tempo por atividade</h1>
+      <span class="spacer"></span>
+      <select id="dash-range" aria-label="Período">
+        <option value="1">Hoje</option>
+        <option value="7" selected>Últimos 7 dias</option>
+        <option value="30">Últimos 30 dias</option>
+      </select>
+    </header>
+    <div class="card">
+      <p id="dash-total" class="total"></p>
+      <div id="dash-cats"></div>
     </div>
   </section>
 </main>
@@ -1032,6 +1063,17 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     window.scrollTo(0, 0);
     renderCategories();
   });
+  $("open-dash").addEventListener("click", () => {
+    appEl.hidden = true;
+    $("dash-screen").hidden = false;
+    window.scrollTo(0, 0);
+    renderDash();
+  });
+  $("dash-back").addEventListener("click", () => {
+    $("dash-screen").hidden = true;
+    appEl.hidden = false;
+  });
+  $("dash-range").addEventListener("change", renderDash);
   $("cats-back").addEventListener("click", () => {
     $("cats-screen").hidden = true;
     appEl.hidden = false;
@@ -1039,6 +1081,111 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   $("ev-priority").addEventListener("change", () => { $("ev-level").hidden = !$("ev-priority").checked; });
 
   window.addEventListener("online", () => { if (!saveTimer) saveDay(); });
+
+  // Dashboard: tempo somado por categoria (nível 1) e por tarefa (nível 2)
+  const openCats = new Set();
+  let dashData = { groups: [], grand: 0 };
+  function fmtHM(ms) {
+    const m = Math.round(ms / 60000);
+    const h = Math.floor(m / 60), min = m % 60;
+    return h ? h + "h " + String(min).padStart(2, "0") + "min" : min + " min";
+  }
+  async function renderDash() {
+    const days = Number($("dash-range").value);
+    const to = todayStr();
+    const from = shiftDay(to, -(days - 1));
+    $("dash-cats").textContent = "Carregando…";
+    let rows = [];
+    try {
+      const { data, error } = await sb.from("planner_days").select("day,data").gte("day", from).lte("day", to);
+      if (error) throw error;
+      rows = data || [];
+    } catch (e) {
+      $("dash-cats").textContent = "Sem conexão: não foi possível carregar o tempo.";
+      return;
+    }
+    const now = Date.now();
+    const perTask = {};
+    rows.forEach((r) => {
+      const t = (r.data && r.data.timers) || {};
+      Object.keys(t).forEach((id) => {
+        const v = t[id];
+        const ms = (v.total || 0) + (v.runningSince ? now - v.runningSince : 0);
+        perTask[id] = (perTask[id] || 0) + ms;
+      });
+    });
+    const groups = new Map();
+    Object.keys(perTask).forEach((id) => {
+      const ev = events.find((x) => x.id === id);
+      const cat = ev ? catById(ev.category_id) : null;
+      const key = cat ? cat.id : "none";
+      if (!groups.has(key)) {
+        groups.set(key, { key: key, name: cat ? cat.name : "Sem categoria", color: cat ? cat.color : "#7f8c8d", total: 0, tasks: [] });
+      }
+      const g = groups.get(key);
+      g.total += perTask[id];
+      g.tasks.push({ title: ev ? ev.title : "Tarefa removida", ms: perTask[id] });
+    });
+    const list = [...groups.values()].sort((a, b) => b.total - a.total);
+    dashData = { groups: list, grand: list.reduce((s, g) => s + g.total, 0) };
+    paintDash();
+  }
+  function paintDash() {
+    const { groups, grand } = dashData;
+    $("dash-total").textContent = "Total no período: " + fmtHM(grand);
+    const box = $("dash-cats");
+    box.textContent = "";
+    if (!groups.length) {
+      box.textContent = "Nenhum tempo registrado neste período.";
+      return;
+    }
+    const max = Math.max(...groups.map((g) => g.total));
+    groups.forEach((g) => {
+      const wrap = document.createElement("div");
+      wrap.className = "cat-group";
+      const head = document.createElement("button");
+      head.type = "button";
+      head.className = "cat-head";
+      head.setAttribute("aria-expanded", String(openCats.has(g.key)));
+      const label = document.createElement("span");
+      label.className = "label";
+      label.textContent = g.name;
+      label.style.color = g.color;
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      const fill = document.createElement("span");
+      fill.style.width = (g.total / max * 100) + "%";
+      fill.style.background = g.color;
+      bar.append(fill);
+      const time = document.createElement("span");
+      time.className = "time";
+      time.textContent = fmtHM(g.total) + (openCats.has(g.key) ? " ▾" : " ▸");
+      head.append(label, bar, time);
+      head.addEventListener("click", () => {
+        if (openCats.has(g.key)) openCats.delete(g.key); else openCats.add(g.key);
+        paintDash();
+      });
+      wrap.append(head);
+      if (openCats.has(g.key)) {
+        const tasks = document.createElement("div");
+        tasks.className = "task-rows";
+        g.tasks.slice().sort((a, b) => b.ms - a.ms).forEach((t) => {
+          const row = document.createElement("div");
+          row.className = "task-row";
+          const name = document.createElement("span");
+          name.className = "name";
+          name.textContent = t.title;
+          const tm = document.createElement("span");
+          tm.className = "time";
+          tm.textContent = fmtHM(t.ms);
+          row.append(name, tm);
+          tasks.append(row);
+        });
+        wrap.append(tasks);
+      }
+      box.append(wrap);
+    });
+  }
 
   // Menu que mostra ou esconde Lembretes, Tarefas e Notas (começam escondidos)
   let openPanels = [];
