@@ -86,6 +86,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .sheet tr.add-row td { background: #fafbfd; }
 .sheet tr.add-row input { border-color: var(--line); background: var(--card); }
 .sheet .neg { color: var(--neg); }
+.sheet tr.muted-row td { color: var(--muted); }
 </style>
 </head>
 <body>
@@ -111,6 +112,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     <nav class="nav" aria-label="Telas">
       <button type="button" data-view="contas" aria-pressed="true">Contas a pagar e receber</button>
       <button type="button" data-view="caixa" aria-pressed="false">Caixa</button>
+      <button type="button" data-view="fluxo" aria-pressed="false">Fluxo de caixa</button>
       <button type="button" data-view="mensal" aria-pressed="false">Planilha do mês</button>
       <button type="button" data-view="mov" aria-pressed="false">Movimentações</button>
     </nav>
@@ -214,6 +216,18 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
       </div>
     </div>
 
+    <!-- FLUXO DE CAIXA: previsto x realizado por dia -->
+    <div id="v-fluxo" class="wrap" hidden>
+      <div class="card" style="display:grid; gap:12px;">
+        <div class="toolbar">
+          <span class="meta">Saldo inicial do mês</span>
+          <input id="fx-open" type="text" inputmode="decimal" placeholder="0,00" style="width:160px" aria-label="Saldo inicial do mês">
+        </div>
+        <div class="totals" id="fx-totals"></div>
+        <div class="scroll" id="fx-sheet"></div>
+      </div>
+    </div>
+
     <!-- PLANILHA DO MÊS (formato da aba Junho) -->
     <div id="v-mensal" class="wrap" hidden>
       <div class="card scroll" id="sheet"></div>
@@ -267,7 +281,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   let month = todayStr().slice(0, 7);      // mês exibido (AAAA-MM)
   let entries = [], payments = {};         // contas a pagar/receber e baixas
   let movements = [];                      // lançamentos de caixa
-  let ledger = [];                         // visão unificada (caixa + baixas)
+  let ledger = [];
+  let openings = {};                       // saldo inicial por mês: { "AAAA-MM": centavos }                         // visão unificada (caixa + baixas)
   let payOpenId = null, editId = null, cxEditId = null;
 
   // ---------- utilidades ----------
@@ -381,6 +396,9 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     (p.data || []).forEach((x) => { (payments[x.entry_id] = payments[x.entry_id] || []).push(x); });
     movements = m.data || [];
     ledger = l.data || [];
+    const o = await sb.from("fin_opening_balances").select("*");
+    openings = {};
+    (o.data || []).forEach((x) => { openings[x.month] = toCents(x.amount); });
     setStatus("Sincronizado");
     render();
   }
@@ -392,11 +410,13 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     $("v-caixa").hidden = view !== "caixa";
     $("v-mov").hidden = view !== "mov";
     $("v-mensal").hidden = view !== "mensal";
+    $("v-fluxo").hidden = view !== "fluxo";
     $("month").value = month;
     if (view === "contas") renderContas();
     if (view === "caixa") renderCaixa();
     if (view === "mov") renderMov();
     if (view === "mensal") renderMensal();
+    if (view === "fluxo") renderFluxo();
   }
 
   // Contas a pagar e receber
@@ -772,6 +792,85 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
       box.append(gt.t);
     });
   }
+
+  // ---------- fluxo de caixa: previsto x realizado por dia ----------
+  // Previsto = contas pelo vencimento (valor total). Realizado = caixa e baixas pela data do movimento.
+  function moneyOrDash(c) { return c ? brl(c) : "—"; }
+  function sumVals(o) { return Object.values(o).reduce((s, v) => s + v, 0); }
+
+  async function saveOpening(v) {
+    const c = toCents(v);
+    if (!Number.isFinite(c)) { setStatus("Valor inválido"); render(); return; }
+    const { data: u } = await sb.auth.getUser();
+    const { error } = await sb.from("fin_opening_balances").upsert(
+      { user_id: u.user.id, month: month, amount: (c / 100).toFixed(2) },
+      { onConflict: "user_id,month" }
+    );
+    await load();
+    setStatus(error ? "Não foi possível salvar: " + error.message : "Saldo inicial salvo");
+  }
+
+  function renderFluxo() {
+    const [y, m] = month.split("-").map(Number);
+    const last = new Date(y, m, 0).getDate();
+    const pIn = {}, pOut = {}, rIn = {}, rOut = {};
+    const add = (obj, d, c) => { obj[d] = (obj[d] || 0) + c; };
+    entries.forEach((en) => {
+      if (en.status === "cancelado" || en.due_date.slice(0, 7) !== month) return;
+      const d = dayOf(en), c = toCents(en.amount);
+      if (en.kind === "receber") add(pIn, d, c); else add(pOut, d, c);
+    });
+    ledger.forEach((x) => {
+      if (x.data.slice(0, 7) !== month) return;
+      const d = Number(x.data.slice(8, 10)), c = toCents(x.amount);
+      if (x.tipo === "entrada") add(rIn, d, c); else add(rOut, d, c);
+    });
+
+    const open = openings[month] || 0;
+    let accP = open, accR = open;
+    const box = $("fx-sheet");
+    box.textContent = "";
+    const t = sheetTable(["Dia", "Previsto entradas", "Previsto saídas", "Realizado entradas", "Realizado saídas", "Saldo previsto", "Saldo realizado", "Diferença"]);
+    for (let d = 1; d <= last; d++) {
+      accP += (pIn[d] || 0) - (pOut[d] || 0);
+      accR += (rIn[d] || 0) - (rOut[d] || 0);
+      const tr = document.createElement("tr");
+      if (!pIn[d] && !pOut[d] && !rIn[d] && !rOut[d]) tr.className = "muted-row";
+      tr.append(
+        cell(String(d).padStart(2, "0") + "/" + month.slice(5, 7)),
+        cell(moneyOrDash(pIn[d]), "num"),
+        cell(moneyOrDash(pOut[d]), "num"),
+        cell(moneyOrDash(rIn[d]), "num"),
+        cell(moneyOrDash(rOut[d]), "num"),
+        cell(brl(accP), "num" + (accP < 0 ? " neg" : "")),
+        cell(brl(accR), "num" + (accR < 0 ? " neg" : "")),
+        cell(brl(accR - accP), "num" + (accR - accP < 0 ? " neg" : ""))
+      );
+      t.tbody.append(tr);
+    }
+    const tot = document.createElement("tr");
+    tot.className = "sub";
+    tot.append(
+      cell("Total"),
+      cell(brl(sumVals(pIn)), "num"), cell(brl(sumVals(pOut)), "num"),
+      cell(brl(sumVals(rIn)), "num"), cell(brl(sumVals(rOut)), "num"),
+      cell(brl(accP), "num"), cell(brl(accR), "num"), cell(brl(accR - accP), "num")
+    );
+    t.tbody.append(tot);
+    box.append(t.t);
+
+    $("fx-open").value = moneyText(open);
+    const totals = $("fx-totals");
+    totals.textContent = "";
+    totals.append(
+      totalBox("Saldo inicial", open),
+      totalBox("Entradas previstas", sumVals(pIn)),
+      totalBox("Saídas previstas", sumVals(pOut)),
+      totalBox("Saldo previsto no fim", accP),
+      totalBox("Saldo realizado no fim", accR)
+    );
+  }
+  $("fx-open").addEventListener("change", () => saveOpening($("fx-open").value));
 
   // ---------- ações: contas ----------
   async function registerPayment(en, s, value, paidOn) {
