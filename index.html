@@ -245,6 +245,9 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .event-row input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
 .event-text { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .event-text small { color: var(--muted); display: block; font-size: 12px; }
+.timer { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.clock { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); margin-right: 4px; }
+.timer small { color: var(--muted); font-size: 12px; }
 .empty { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
 .event-form {
   display: grid;
@@ -313,6 +316,10 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
           <div id="events-list"></div>
           <form id="event-form" class="event-form">
             <input id="ev-title" type="text" placeholder="Tarefa" aria-label="Título da tarefa" required>
+            <div class="pair">
+              <input id="ev-startdate" type="date" aria-label="Data de início">
+              <input id="ev-enddate" type="date" aria-label="Data de fim (opcional)">
+            </div>
             <div class="pair">
               <input id="ev-start" type="time" aria-label="Início" required>
               <input id="ev-end" type="time" aria-label="Fim">
@@ -409,7 +416,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   let loadToken = 0;
   let suppressSave = false;
   let events = [];          // compromissos (série) do usuário
-  let doneEvents = {};      // compromissos concluídos no dia atual: { [eventId]: true }
+  let doneEvents = {};
+  let timers = {};          // cronômetro por tarefa neste dia: { total, runningSince, finished }      // compromissos concluídos no dia atual: { [eventId]: true }
 
   function todayStr() {
     return new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD no fuso local
@@ -435,6 +443,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     document.querySelectorAll("[data-field]").forEach((el) => { data.fields[el.dataset.field] = el.value; });
     document.querySelectorAll("[data-check]").forEach((el) => { data.checks[el.dataset.check] = el.checked; });
     data.doneEvents = Object.assign({}, doneEvents);
+    data.timers = Object.assign({}, timers);
     return data;
   }
   function fill(data) {
@@ -443,6 +452,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     document.querySelectorAll("[data-field]").forEach((el) => { el.value = (d.fields && d.fields[el.dataset.field]) || ""; });
     document.querySelectorAll("[data-check]").forEach((el) => { el.checked = !!(d.checks && d.checks[el.dataset.check]); });
     doneEvents = Object.assign({}, d.doneEvents || {});
+    timers = Object.assign({}, d.timers || {});
     suppressSave = false;
     renderEvents();
   }
@@ -460,6 +470,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   // Um compromisso aparece no dia se o dia cai na regra de repetição a partir da data inicial.
   function occurs(ev, day) {
     if (day < ev.starts_on) return false;
+    if (ev.ends_on && day > ev.ends_on) return false;
     const dow = weekdayOf(day);
     switch (ev.repeat_rule) {
       case "daily": return true;
@@ -558,9 +569,70 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       deleteEvent(ev);
     });
 
+    text.append(timerControl(ev));
     row.append(cb, text, del);
     return row;
   }
+
+  // Cronômetro por tarefa: iniciar, pausar, retomar e finalizar
+  function timerMs(id) {
+    const t = timers[id];
+    if (!t) return 0;
+    return (t.total || 0) + (t.runningSince ? Date.now() - t.runningSince : 0);
+  }
+  function fmtClock(ms) {
+    const s = Math.floor(ms / 1000);
+    return [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60]
+      .map((n) => String(n).padStart(2, "0")).join(":");
+  }
+  function setTimer(id, action) {
+    const now = Date.now();
+    const t = timers[id] || { total: 0, runningSince: null, finished: false };
+    if (action === "start" || action === "resume") {
+      if (!t.runningSince && !t.finished) t.runningSince = now;
+    } else {
+      if (t.runningSince) { t.total += now - t.runningSince; t.runningSince = null; }
+      if (action === "end") t.finished = true;
+    }
+    timers[id] = t;
+    scheduleSave();
+    renderEvents();
+  }
+  function timerControl(ev) {
+    const t = timers[ev.id] || {};
+    const wrap = document.createElement("div");
+    wrap.className = "timer";
+    const clock = document.createElement("span");
+    clock.className = "clock";
+    clock.dataset.id = ev.id;
+    clock.textContent = fmtClock(timerMs(ev.id));
+    wrap.append(clock);
+    const btn = (label, action) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "ghost";
+      b.textContent = label;
+      b.addEventListener("click", () => setTimer(ev.id, action));
+      return b;
+    };
+    if (t.finished) {
+      const done = document.createElement("small");
+      done.textContent = "finalizada";
+      wrap.append(done);
+    } else if (t.runningSince) {
+      wrap.append(btn("Pausar", "pause"), btn("Finalizar", "end"));
+    } else if (t.total > 0) {
+      wrap.append(btn("Retomar", "resume"), btn("Finalizar", "end"));
+    } else {
+      wrap.append(btn("Iniciar", "start"));
+    }
+    return wrap;
+  }
+  setInterval(() => {
+    document.querySelectorAll(".clock[data-id]").forEach((el) => {
+      el.textContent = fmtClock(timerMs(el.dataset.id));
+    });
+  }, 1000);
 
   function renderEvents() {
     timeline.textContent = "";
@@ -607,6 +679,9 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     const isPrio = $("ev-priority").checked;
     const level = $("ev-level").value;
     const kind = $("ev-kind").value;
+    const startDate = $("ev-startdate").value || currentDay;
+    const endDate = $("ev-enddate").value || null;
+    if (endDate && endDate < startDate) { setStatus("A data de fim é anterior à de início"); return; }
     if (!title || !start) return;
     try {
       const { data: userData } = await sb.auth.getUser();
@@ -617,7 +692,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         start_time: start,
         end_time: end || null,
         repeat_rule: repeat,
-        starts_on: currentDay,
+        starts_on: startDate,
+        ends_on: endDate,
         kind: kind,
         is_priority: isPrio,
         priority_level: isPrio ? level : null
@@ -629,6 +705,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       $("ev-repeat").value = "none";
       $("ev-priority").checked = false;
       $("ev-kind").value = "tarefa";
+      $("ev-enddate").value = "";
+      $("ev-startdate").value = currentDay;
       $("ev-level").hidden = true;
       await loadEvents();
       setStatus("Compromisso adicionado");
@@ -651,6 +729,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   async function loadDay(day) {
     const token = ++loadToken;
     dateEl.value = day;
+    $("ev-startdate").value = day;
     const cached = readCache(day);
     fill(cached);
     setStatus("Carregando…");
