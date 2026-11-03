@@ -194,6 +194,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .hevent.done { opacity: 0.7; }
 
 .side { display: grid; gap: 14px; min-width: 0; }
+.panel-menu { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.panel-menu button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--paper); font-weight: 700; }
 .prio-toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .prio-toggle input { width: 18px; height: 18px; margin: 0; }
 .matrix { color: var(--muted); font-size: 12px; margin: 0; line-height: 1.5; }
@@ -302,6 +304,12 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       <button id="logout" type="button">Sair</button>
     </header>
 
+    <nav class="panel-menu" aria-label="Painéis">
+      <button type="button" data-toggle="lembretes" aria-pressed="false">Lembretes</button>
+      <button type="button" data-toggle="tarefas" aria-pressed="false">Tarefas</button>
+      <button type="button" data-toggle="notas" aria-pressed="false">Notas</button>
+    </nav>
+
     <div class="grid">
       <section class="hours" aria-label="Horários">
         <div class="hour"><time>06:00</time><input data-field="h06" aria-label="06:00"></div>
@@ -324,11 +332,11 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       </section>
 
       <div class="side">
-        <section class="card reminders">
+        <section class="card reminders" data-panel="lembretes" hidden>
           <h2>Lembretes</h2>
           <textarea data-field="lembretes" aria-label="Lembretes"></textarea>
         </section>
-        <section class="card compromissos">
+        <section class="card compromissos" data-panel="tarefas" hidden>
           <h2>Tarefas</h2>
           <div id="events-list"></div>
           <form id="event-form" class="event-form">
@@ -367,7 +375,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
           </form>
         </section>
 
-        <section class="card notas">
+        <section class="card notas" data-panel="notas" hidden>
           <h2>Notas</h2>
           <textarea data-field="notas" aria-label="Notas"></textarea>
         </section>
@@ -1023,6 +1031,27 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   $("ev-priority").addEventListener("change", () => { $("ev-level").hidden = !$("ev-priority").checked; });
 
   window.addEventListener("online", () => { if (!saveTimer) saveDay(); });
+
+  // Menu que mostra ou esconde Lembretes, Tarefas e Notas (começam escondidos)
+  let openPanels = [];
+  try { openPanels = JSON.parse(localStorage.getItem("planner-panels") || "[]"); } catch (e) {}
+  function applyPanels() {
+    document.querySelectorAll("[data-panel]").forEach((el) => {
+      el.hidden = !openPanels.includes(el.dataset.panel);
+    });
+    document.querySelectorAll("[data-toggle]").forEach((b) => {
+      b.setAttribute("aria-pressed", String(openPanels.includes(b.dataset.toggle)));
+    });
+  }
+  document.querySelectorAll("[data-toggle]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const k = b.dataset.toggle;
+      openPanels = openPanels.includes(k) ? openPanels.filter((x) => x !== k) : openPanels.concat(k);
+      try { localStorage.setItem("planner-panels", JSON.stringify(openPanels)); } catch (e) {}
+      applyPanels();
+    });
+  });
+  applyPanels();
 
   // Login por código de 8 dígitos (sem redirecionamento)
   const emailEl = $("email"), codeEl = $("code");
