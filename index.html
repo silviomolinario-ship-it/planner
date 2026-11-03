@@ -200,6 +200,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .hevent.lvl-urgente { background: var(--soft-red); border-left-color: #c2410c; }
 .hevent.lvl-importante { background: var(--soft-yellow); }
 .hevent.lvl-normal { background: var(--soft-blue); }
+.hevent.reuniao { background: color-mix(in srgb, #2f8f5b 22%, var(--paper)); border-left-color: #2f8f5b; }
 .card {
   background: var(--paper);
   border: 1px solid var(--line);
@@ -321,6 +322,10 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
               <option value="daily">Todos os dias</option>
               <option value="weekdays">Dias úteis (seg a sex)</option>
               <option value="weekly">Semanal (mesmo dia da semana)</option>
+            </select>
+            <select id="ev-kind" aria-label="Tipo">
+              <option value="tarefa">Tarefa</option>
+              <option value="reuniao">Reunião (verde na agenda)</option>
             </select>
             <label class="prio-toggle"><input id="ev-priority" type="checkbox"> Tarefa prioritária</label>
             <select id="ev-level" aria-label="Nível de prioridade" hidden>
@@ -496,14 +501,14 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   // Bloco de compromisso dentro de uma linha de hora
   function agendaItem(ev) {
     const wrap = document.createElement("div");
-    wrap.className = "hevent" + (doneEvents[ev.id] ? " done" : "") + (ev.is_priority ? " lvl-" + ev.priority_level : "");
+    wrap.className = "hevent" + (doneEvents[ev.id] ? " done" : "") + (ev.is_priority ? " lvl-" + ev.priority_level : "") + (ev.kind === "reuniao" ? " reuniao" : "");
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.checked = !!doneEvents[ev.id];
     cb.setAttribute("aria-label", "Concluído: " + ev.title);
     cb.addEventListener("change", () => toggleDone(ev, cb.checked));
     const label = document.createElement("span");
-    label.textContent = (ev.is_priority ? LEVELS[ev.priority_level].label + " · " : "") + timeRange(ev.start_time, ev.end_time) + "  " + ev.title;
+    label.textContent = (ev.kind === "reuniao" ? "Reunião · " : "") + (ev.is_priority ? LEVELS[ev.priority_level].label + " · " : "") + timeRange(ev.start_time, ev.end_time) + "  " + ev.title;
     wrap.append(cb, label);
     return wrap;
   }
@@ -526,6 +531,11 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       const lvl = document.createElement("small");
       lvl.textContent = "Prioridade: " + LEVELS[ev.priority_level].label;
       text.append(lvl);
+    }
+    if (ev.kind === "reuniao") {
+      const kind = document.createElement("small");
+      kind.textContent = "Reunião";
+      text.append(kind);
     }
     const rep = repeatLabel(ev.repeat_rule);
     if (rep) {
@@ -596,6 +606,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     const repeat = $("ev-repeat").value;
     const isPrio = $("ev-priority").checked;
     const level = $("ev-level").value;
+    const kind = $("ev-kind").value;
     if (!title || !start) return;
     try {
       const { data: userData } = await sb.auth.getUser();
@@ -607,6 +618,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         end_time: end || null,
         repeat_rule: repeat,
         starts_on: currentDay,
+        kind: kind,
         is_priority: isPrio,
         priority_level: isPrio ? level : null
       });
@@ -616,6 +628,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       $("ev-end").value = "";
       $("ev-repeat").value = "none";
       $("ev-priority").checked = false;
+      $("ev-kind").value = "tarefa";
       $("ev-level").hidden = true;
       await loadEvents();
       setStatus("Compromisso adicionado");
