@@ -24,6 +24,7 @@ button {
 button.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 700; }
 button.ghost { border-color: transparent; background: transparent; color: var(--muted); padding: 4px 8px; font-size: 13px; }
 button.danger { color: var(--neg); }
+button[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 700; }
 input, select {
   width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
 }
@@ -32,27 +33,30 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .top { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .top h1 { font-size: 20px; margin: 0; font-weight: 800; flex: 1; min-width: 160px; }
 .back { color: var(--blue); text-decoration: none; font-weight: 700; }
+.nav { display: flex; flex-wrap: wrap; gap: 8px; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 .kpi small { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
 .kpi strong { display: block; font-size: 20px; margin-top: 4px; font-variant-numeric: tabular-nums; }
-.tabs { display: flex; gap: 8px; }
-.tabs button[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 700; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .toolbar .grow { flex: 1; }
-.entry { border-top: 1px solid var(--line); padding: 12px 0; display: grid; gap: 8px; }
-.entry:first-child { border-top: none; }
-.entry-head { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.item { border-top: 1px solid var(--line); padding: 12px 0; display: grid; gap: 8px; }
+.item:first-child { border-top: none; }
+.item-head { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
 .desc { font-weight: 700; overflow-wrap: anywhere; }
 .meta { color: var(--muted); font-size: 13px; }
 .amounts { text-align: right; font-variant-numeric: tabular-nums; display: grid; gap: 4px; justify-items: end; }
+.amount-in { color: var(--pos); font-weight: 700; }
+.amount-out { color: var(--neg); font-weight: 700; }
 .badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #eef1f6; color: var(--muted); }
 .badge.pendente { background: #fdf3dd; color: #8a5d00; }
 .badge.parcial { background: #e6eefb; color: var(--blue); }
 .badge.vencido { background: #fbe5e5; color: var(--neg); }
 .badge.quitado { background: #dff3ea; color: var(--pos); }
+.badge.caixa { background: #eef1f6; color: var(--ink); }
+.badge.baixa { background: #e6eefb; color: var(--blue); }
 .actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.pay-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; }
+.inline-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; }
 .hist { display: grid; gap: 4px; font-size: 13px; color: var(--muted); padding-left: 4px; }
 .hist div { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; align-items: end; }
@@ -60,6 +64,9 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .form .full { grid-column: 1 / -1; }
 .form .buttons { grid-column: 1 / -1; display: flex; gap: 8px; }
 .empty { color: var(--muted); margin: 0; }
+.totals { display: flex; flex-wrap: wrap; gap: 16px; font-variant-numeric: tabular-nums; }
+.totals span { color: var(--muted); font-size: 13px; }
+.totals strong { display: block; font-size: 18px; color: var(--ink); }
 #status { color: var(--muted); font-size: 13px; margin: 0; min-height: 1em; }
 #auth {
   max-width: 360px; margin: 12vh auto 0; display: grid; gap: 12px;
@@ -83,72 +90,147 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   <section id="app" class="wrap" hidden>
     <header class="top">
       <a class="back" href="../">‹ Início</a>
-      <h1>Contas a pagar e receber</h1>
-      <input id="month" type="month" aria-label="Mês de vencimento" style="width:auto">
+      <h1>Finanças</h1>
+      <input id="month" type="month" aria-label="Mês" style="width:auto">
       <button id="logout" type="button">Sair</button>
     </header>
+
+    <nav class="nav" aria-label="Telas">
+      <button type="button" data-view="contas" aria-pressed="true">Contas a pagar e receber</button>
+      <button type="button" data-view="caixa" aria-pressed="false">Caixa</button>
+      <button type="button" data-view="mov" aria-pressed="false">Movimentações</button>
+    </nav>
     <p id="status" role="status"></p>
 
-    <div class="kpis">
-      <div class="card kpi"><small>A pagar em aberto</small><strong id="k-pay-open">—</strong></div>
-      <div class="card kpi"><small>Pago no mês</small><strong id="k-pay-done">—</strong></div>
-      <div class="card kpi"><small>A receber em aberto</small><strong id="k-rec-open">—</strong></div>
-      <div class="card kpi"><small>Resultado previsto</small><strong id="k-result">—</strong></div>
+    <!-- CONTAS A PAGAR E RECEBER -->
+    <div id="v-contas" class="wrap">
+      <div class="kpis">
+        <div class="card kpi"><small>A pagar em aberto</small><strong id="k-pay-open">—</strong></div>
+        <div class="card kpi"><small>Pago no mês</small><strong id="k-pay-done">—</strong></div>
+        <div class="card kpi"><small>A receber em aberto</small><strong id="k-rec-open">—</strong></div>
+        <div class="card kpi"><small>Resultado previsto</small><strong id="k-result">—</strong></div>
+      </div>
+      <div class="card" style="display:grid; gap:12px;">
+        <div class="toolbar">
+          <div class="nav">
+            <button id="tab-pagar" type="button" data-tab="pagar" aria-pressed="true">A pagar</button>
+            <button id="tab-receber" type="button" data-tab="receber" aria-pressed="false">A receber</button>
+          </div>
+          <span class="grow"></span>
+          <button id="new-btn" class="primary" type="button">+ Novo lançamento</button>
+        </div>
+
+        <form id="form" class="form" hidden>
+          <label>Tipo
+            <select id="f-kind">
+              <option value="pagar">A pagar</option>
+              <option value="receber">A receber</option>
+            </select>
+          </label>
+          <label>Descrição
+            <input id="f-desc" type="text" required>
+          </label>
+          <label>Credor / pagador
+            <input id="f-who" type="text">
+          </label>
+          <label>Categoria
+            <input id="f-cat" type="text" list="cats">
+          </label>
+          <label>Valor total
+            <input id="f-amount" type="text" inputmode="decimal" placeholder="0,00" required>
+          </label>
+          <label>Vencimento (1ª parcela)
+            <input id="f-due" type="date" required>
+          </label>
+          <label id="f-n-wrap">Parcelas
+            <input id="f-n" type="number" min="1" max="360" value="1">
+          </label>
+          <label class="full">Observações
+            <input id="f-notes" type="text">
+          </label>
+          <div class="buttons">
+            <button id="f-submit" class="primary" type="submit">Salvar</button>
+            <button id="f-cancel" type="button">Cancelar</button>
+          </div>
+        </form>
+
+        <div id="list"></div>
+      </div>
     </div>
 
-    <div class="card" style="display:grid; gap:12px;">
-      <div class="toolbar">
-        <div class="tabs">
-          <button id="tab-pagar" type="button" data-tab="pagar" aria-pressed="true">A pagar</button>
-          <button id="tab-receber" type="button" data-tab="receber" aria-pressed="false">A receber</button>
-        </div>
-        <span class="grow"></span>
-        <button id="new-btn" class="primary" type="button">+ Novo lançamento</button>
+    <!-- CAIXA -->
+    <div id="v-caixa" class="wrap" hidden>
+      <div class="card" style="display:grid; gap:12px;">
+        <h2 style="margin:0; font-size:16px;" id="cx-title">Novo lançamento de caixa</h2>
+        <form id="cx-form" class="form">
+          <label>Tipo
+            <select id="cx-tipo">
+              <option value="saida">Despesa (saída)</option>
+              <option value="entrada">Crédito recebido (entrada)</option>
+            </select>
+          </label>
+          <label>Descrição
+            <input id="cx-desc" type="text" required>
+          </label>
+          <label>Quem paga / recebe
+            <input id="cx-who" type="text">
+          </label>
+          <label>Categoria
+            <input id="cx-cat" type="text" list="cats">
+          </label>
+          <label>Valor
+            <input id="cx-amount" type="text" inputmode="decimal" placeholder="0,00" required>
+          </label>
+          <label>Data
+            <input id="cx-date" type="date" required>
+          </label>
+          <label class="full">Observações
+            <input id="cx-notes" type="text">
+          </label>
+          <div class="buttons">
+            <button id="cx-submit" class="primary" type="submit">Lançar</button>
+            <button id="cx-cancel" type="button" hidden>Cancelar edição</button>
+          </div>
+        </form>
       </div>
 
-      <form id="form" class="form" hidden>
-        <label>Tipo
-          <select id="f-kind">
-            <option value="pagar">A pagar</option>
-            <option value="receber">A receber</option>
-          </select>
-        </label>
-        <label>Descrição
-          <input id="f-desc" type="text" required>
-        </label>
-        <label>Credor / pagador
-          <input id="f-who" type="text">
-        </label>
-        <label>Categoria
-          <input id="f-cat" type="text" list="cats">
-        </label>
-        <label>Valor
-          <input id="f-amount" type="text" inputmode="decimal" placeholder="0,00" required>
-        </label>
-        <label>Vencimento
-          <input id="f-due" type="date" required>
-        </label>
-        <label class="full">Observações
-          <input id="f-notes" type="text">
-        </label>
-        <div class="buttons">
-          <button id="f-submit" class="primary" type="submit">Salvar</button>
-          <button id="f-cancel" type="button">Cancelar</button>
-        </div>
-      </form>
-      <datalist id="cats">
-        <option value="Moradia"></option><option value="Alimentação"></option><option value="Açougue"></option>
-        <option value="Transporte"></option><option value="Saúde"></option><option value="Educação"></option>
-        <option value="Família"></option><option value="Comunicação"></option><option value="Lazer"></option>
-        <option value="Assinaturas"></option><option value="Impostos"></option><option value="Dívidas"></option>
-        <option value="Investimentos"></option><option value="Salário"></option><option value="Benefícios"></option>
-        <option value="Renda extra"></option><option value="Prestação de serviços"></option><option value="Outras"></option>
-      </datalist>
+      <div class="card" style="display:grid; gap:12px;">
+        <div class="totals" id="cx-totals"></div>
+        <div id="cx-list"></div>
+      </div>
+    </div>
 
-      <div id="list"></div>
+    <!-- MOVIMENTAÇÕES -->
+    <div id="v-mov" class="wrap" hidden>
+      <div class="card" style="display:grid; gap:12px;">
+        <div class="toolbar">
+          <div class="nav">
+            <button type="button" data-mov="todas" aria-pressed="true">Todas</button>
+            <button type="button" data-mov="entrada" aria-pressed="false">Entradas</button>
+            <button type="button" data-mov="saida" aria-pressed="false">Saídas</button>
+          </div>
+          <span class="grow"></span>
+          <div class="nav">
+            <button type="button" data-origem="todas" aria-pressed="true">Tudo</button>
+            <button type="button" data-origem="caixa" aria-pressed="false">Só caixa</button>
+            <button type="button" data-origem="baixa" aria-pressed="false">Só contas baixadas</button>
+          </div>
+        </div>
+        <div class="totals" id="mov-totals"></div>
+        <div id="mov-list"></div>
+      </div>
     </div>
   </section>
 </main>
+
+<datalist id="cats">
+  <option value="Moradia"></option><option value="Alimentação"></option><option value="Açougue"></option>
+  <option value="Transporte"></option><option value="Saúde"></option><option value="Educação"></option>
+  <option value="Família"></option><option value="Comunicação"></option><option value="Lazer"></option>
+  <option value="Assinaturas"></option><option value="Impostos"></option><option value="Dívidas"></option>
+  <option value="Investimentos"></option><option value="Salário"></option><option value="Benefícios"></option>
+  <option value="Renda extra"></option><option value="Prestação de serviços"></option><option value="Outras"></option>
+</datalist>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
@@ -160,12 +242,14 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   const $ = (id) => document.getElementById(id);
   const LABEL = { pendente: "Pendente", parcial: "Parcial", vencido: "Vencido", quitado: "Quitado", cancelado: "Cancelado" };
 
-  let tab = "pagar";                       // aba atual: pagar | receber
-  let month = todayStr().slice(0, 7);      // mês de vencimento exibido (AAAA-MM)
-  let entries = [];                        // lançamentos do usuário
-  let payments = {};                       // { [entryId]: [pagamentos] }
-  let payOpenId = null;                    // lançamento com formulário de pagamento aberto
-  let editId = null;                       // lançamento em edição
+  let view = "contas";                     // contas | caixa | mov
+  let tab = "pagar";                       // contas: pagar | receber
+  let movTipo = "todas", movOrigem = "todas";
+  let month = todayStr().slice(0, 7);      // mês exibido (AAAA-MM)
+  let entries = [], payments = {};         // contas a pagar/receber e baixas
+  let movements = [];                      // lançamentos de caixa
+  let ledger = [];                         // visão unificada (caixa + baixas)
+  let payOpenId = null, editId = null, cxEditId = null;
 
   // ---------- utilidades ----------
   function todayStr() { return new Date().toLocaleDateString("en-CA"); }
@@ -209,6 +293,41 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     });
     return b;
   }
+  function item(parts) {
+    const row = document.createElement("div");
+    row.className = "item";
+    const head = document.createElement("div");
+    head.className = "item-head";
+    const left = document.createElement("div");
+    const d = document.createElement("div");
+    d.className = "desc";
+    d.textContent = parts.title;
+    const m = document.createElement("div");
+    m.className = "meta";
+    m.textContent = parts.meta;
+    left.append(d, m);
+    const right = document.createElement("div");
+    right.className = "amounts";
+    if (parts.badge) {
+      const b = document.createElement("span");
+      b.className = "badge " + parts.badgeClass;
+      b.textContent = parts.badge;
+      right.append(b);
+    }
+    const v = document.createElement("div");
+    v.className = parts.amountClass || "";
+    v.textContent = parts.amount;
+    right.append(v);
+    head.append(left, right);
+    row.append(head);
+    if (parts.actions && parts.actions.length) {
+      const acts = document.createElement("div");
+      acts.className = "actions";
+      parts.actions.forEach((a) => acts.append(a));
+      row.append(acts);
+    }
+    return row;
+  }
 
   // Status derivado: o saldo em aberto vem dos pagamentos, não de um campo digitado
   function summarize(en) {
@@ -227,27 +346,41 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   // ---------- dados ----------
   async function load() {
     setStatus("Carregando…");
-    const [e, p] = await Promise.all([
+    const [e, p, m, l] = await Promise.all([
       sb.from("fin_entries").select("*").order("due_date", { ascending: true }),
-      sb.from("fin_payments").select("*").order("paid_on", { ascending: true })
+      sb.from("fin_payments").select("*").order("paid_on", { ascending: true }),
+      sb.from("fin_movements").select("*").order("data", { ascending: true }),
+      sb.from("fin_ledger").select("*").order("data", { ascending: true })
     ]);
-    if (e.error || p.error) {
-      setStatus("Não foi possível carregar. Confira se as tabelas financeiras foram criadas.");
+    const err = e.error || p.error || m.error || l.error;
+    if (err) {
+      setStatus("Não foi possível carregar. Confira se as tabelas e a visão financeira foram criadas.");
       return;
     }
     entries = e.data || [];
     payments = {};
     (p.data || []).forEach((x) => { (payments[x.entry_id] = payments[x.entry_id] || []).push(x); });
+    movements = m.data || [];
+    ledger = l.data || [];
     setStatus("Sincronizado");
     render();
   }
 
-  // ---------- tela ----------
+  // ---------- telas ----------
   function render() {
-    $("tab-pagar").setAttribute("aria-pressed", String(tab === "pagar"));
-    $("tab-receber").setAttribute("aria-pressed", String(tab === "receber"));
+    document.querySelectorAll("[data-view]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === view)));
+    $("v-contas").hidden = view !== "contas";
+    $("v-caixa").hidden = view !== "caixa";
+    $("v-mov").hidden = view !== "mov";
     $("month").value = month;
+    if (view === "contas") renderContas();
+    if (view === "caixa") renderCaixa();
+    if (view === "mov") renderMov();
+  }
 
+  // Contas a pagar e receber
+  function renderContas() {
+    document.querySelectorAll("[data-tab]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tab === tab)));
     const inMonth = entries.filter((en) => en.due_date.slice(0, 7) === month);
     let payOpen = 0, recOpen = 0, payDone = 0;
     inMonth.forEach((en) => {
@@ -285,56 +418,27 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 
   function entryEl(en) {
     const s = summarize(en);
-    const row = document.createElement("div");
-    row.className = "entry";
-
-    const head = document.createElement("div");
-    head.className = "entry-head";
-    const left = document.createElement("div");
-    const d = document.createElement("div");
-    d.className = "desc";
-    d.textContent = en.description;
-    const m = document.createElement("div");
-    m.className = "meta";
-    m.textContent = [en.counterparty, en.category, "vence " + fmtDate(en.due_date)].filter(Boolean).join(" · ");
-    left.append(d, m);
-
-    const right = document.createElement("div");
-    right.className = "amounts";
-    const badge = document.createElement("span");
-    badge.className = "badge " + s.st;
-    badge.textContent = LABEL[s.st];
-    const total = document.createElement("div");
-    total.textContent = brl(s.total);
-    right.append(badge, total);
-    if (s.st !== "quitado" && s.st !== "cancelado") {
-      const bal = document.createElement("div");
-      bal.className = "meta";
-      bal.textContent = "saldo " + brl(s.balance);
-      right.append(bal);
-    }
-    head.append(left, right);
-    row.append(head);
-
-    if (en.notes) {
-      const n = document.createElement("div");
-      n.className = "meta";
-      n.textContent = en.notes;
-      row.append(n);
-    }
-
-    const actions = document.createElement("div");
-    actions.className = "actions";
+    const parts = {
+      title: en.description,
+      meta: [en.counterparty, en.category, "vence " + fmtDate(en.due_date), en.installment_group ? "parcela" : null]
+        .filter(Boolean).join(" · "),
+      badge: LABEL[s.st],
+      badgeClass: s.st,
+      amount: brl(s.total),
+      amountClass: "",
+      actions: []
+    };
+    if (s.st !== "quitado" && s.st !== "cancelado") parts.meta += " · saldo " + brl(s.balance);
     if (s.st !== "cancelado" && s.balance > 0) {
-      actions.append(btn(
+      parts.actions.push(btn(
         tab === "pagar" ? "Registrar pagamento" : "Registrar recebimento",
         () => { payOpenId = payOpenId === en.id ? null : en.id; render(); },
         "primary"
       ));
     }
-    actions.append(btn("Editar", () => startEdit(en)));
-    if (s.st !== "cancelado") actions.append(armedBtn("Cancelar lançamento", () => cancelEntry(en)));
-    row.append(actions);
+    parts.actions.push(btn("Editar", () => startEdit(en)));
+    if (s.st !== "cancelado") parts.actions.push(armedBtn("Cancelar lançamento", () => cancelEntry(en)));
+    const row = item(parts);
 
     if (payOpenId === en.id) row.append(payForm(en, s));
 
@@ -356,7 +460,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 
   function payForm(en, s) {
     const f = document.createElement("div");
-    f.className = "pay-form";
+    f.className = "inline-form";
     const amt = document.createElement("input");
     amt.type = "text";
     amt.inputMode = "decimal";
@@ -371,7 +475,94 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     return f;
   }
 
-  // ---------- ações ----------
+  // Caixa: lançamentos diretos de entrada e saída
+  function renderCaixa() {
+    const list = movements
+      .filter((m) => m.data.slice(0, 7) === month)
+      .sort((a, b) => a.data.localeCompare(b.data));
+    let inn = 0, out = 0;
+    list.forEach((m) => { if (m.tipo === "entrada") inn += toCents(m.amount); else out += toCents(m.amount); });
+    $("cx-totals").textContent = "";
+    $("cx-totals").append(totalBox("Entradas", inn), totalBox("Saídas", out), totalBox("Saldo do mês", inn - out));
+
+    const box = $("cx-list");
+    box.textContent = "";
+    if (!list.length) {
+      const p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = "Nenhum lançamento de caixa neste mês.";
+      box.append(p);
+      return;
+    }
+    list.forEach((m) => box.append(movementEl(m, true)));
+  }
+
+  function totalBox(label, cents) {
+    const w = document.createElement("div");
+    const s = document.createElement("span");
+    s.textContent = label;
+    const v = document.createElement("strong");
+    v.textContent = brl(cents);
+    v.style.color = cents < 0 ? "var(--neg)" : "var(--ink)";
+    w.append(s, v);
+    return w;
+  }
+
+  function movementEl(m, editable) {
+    const isIn = m.tipo === "entrada";
+    const actions = [];
+    if (editable) {
+      actions.push(btn("Editar", () => startCaixaEdit(m)));
+      actions.push(armedBtn("Excluir", () => deleteMovement(m)));
+    }
+    return item({
+      title: m.description,
+      meta: [m.counterparty, m.category, fmtDate(m.data), m.notes].filter(Boolean).join(" · "),
+      badge: editable ? "Caixa" : "Baixa",
+      badgeClass: editable ? "caixa" : "baixa",
+      amount: (isIn ? "+ " : "− ") + brl(toCents(m.amount)),
+      amountClass: isIn ? "amount-in" : "amount-out",
+      actions: actions
+    });
+  }
+
+  // Movimentações: tudo que entrou e saiu, do caixa e das contas baixadas
+  function renderMov() {
+    document.querySelectorAll("[data-mov]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mov === movTipo)));
+    document.querySelectorAll("[data-origem]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.origem === movOrigem)));
+
+    const all = ledger.filter((x) => x.data.slice(0, 7) === month);
+    let inn = 0, out = 0;
+    all.forEach((x) => { if (x.tipo === "entrada") inn += toCents(x.amount); else out += toCents(x.amount); });
+    $("mov-totals").textContent = "";
+    $("mov-totals").append(totalBox("Entradas", inn), totalBox("Saídas", out), totalBox("Saldo do mês", inn - out));
+
+    const list = all
+      .filter((x) => movTipo === "todas" || x.tipo === movTipo)
+      .filter((x) => movOrigem === "todas" || x.origem === movOrigem)
+      .sort((a, b) => a.data.localeCompare(b.data));
+    const box = $("mov-list");
+    box.textContent = "";
+    if (!list.length) {
+      const p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = "Nenhuma movimentação neste filtro.";
+      box.append(p);
+      return;
+    }
+    list.forEach((x) => {
+      if (x.origem === "caixa") {
+        const m = movements.find((mv) => mv.id === x.id);
+        if (m) { box.append(movementEl(m, true)); return; }
+      }
+      box.append(movementEl({
+        tipo: x.tipo, description: x.description, counterparty: x.counterparty,
+        category: x.category, data: x.data, amount: x.amount, notes: "conta baixada"
+      }, false));
+    });
+  }
+
+  // ---------- ações: contas ----------
   async function registerPayment(en, s, value, paidOn) {
     const c = toCents(value);
     if (!(c > 0)) { setStatus("Informe um valor maior que zero"); return; }
@@ -383,14 +574,14 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     if (error) { setStatus("Não foi possível registrar: " + error.message); return; }
     payOpenId = null;
     await load();
-    setStatus("Pagamento registrado");
+    setStatus("Baixa registrada");
   }
 
   async function deletePayment(x) {
     const { error } = await sb.from("fin_payments").delete().eq("id", x.id);
-    if (error) { setStatus("Não foi possível excluir o pagamento"); return; }
+    if (error) { setStatus("Não foi possível excluir a baixa"); return; }
     await load();
-    setStatus("Pagamento excluído");
+    setStatus("Baixa excluída");
   }
 
   async function cancelEntry(en) {
@@ -405,11 +596,13 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   function openForm() {
     $("form").hidden = false;
     $("f-submit").textContent = editId ? "Salvar alterações" : "Salvar";
+    $("f-n-wrap").hidden = !!editId;
     $("f-desc").focus();
   }
   function closeForm() {
     editId = null;
     $("form").reset();
+    $("f-n").value = "1";
     $("form").hidden = true;
   }
   function newEntry() {
@@ -435,35 +628,124 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     e.preventDefault();
     const c = toCents($("f-amount").value);
     if (!(c > 0)) { setStatus("Informe um valor maior que zero"); return; }
-    const row = {
-      kind: $("f-kind").value,
-      description: $("f-desc").value.trim(),
-      counterparty: $("f-who").value.trim() || null,
-      category: $("f-cat").value.trim() || null,
-      amount: (c / 100).toFixed(2),
-      due_date: $("f-due").value,
-      notes: $("f-notes").value.trim() || null
-    };
-    if (!row.description || !row.due_date) { setStatus("Preencha descrição e vencimento"); return; }
+    const kind = $("f-kind").value;
+    const description = $("f-desc").value.trim();
+    const counterparty = $("f-who").value.trim() || null;
+    const category = $("f-cat").value.trim() || null;
+    const due = $("f-due").value;
+    const notes = $("f-notes").value.trim() || null;
+    const n = Math.floor(Number($("f-n").value));
+    if (!description || !due) { setStatus("Preencha descrição e vencimento"); return; }
+
     let res;
     if (editId) {
-      res = await sb.from("fin_entries").update(Object.assign({ updated_at: new Date().toISOString() }, row)).eq("id", editId);
+      res = await sb.from("fin_entries").update({
+        kind, description, counterparty, category, notes, due_date: due,
+        amount: (c / 100).toFixed(2), updated_at: new Date().toISOString()
+      }).eq("id", editId);
+    } else if (n > 1) {
+      // Desdobra em n parcelas mensais, a partir do vencimento informado
+      if (n > 360) { setStatus("No máximo 360 parcelas"); return; }
+      res = await sb.rpc("fin_installments", {
+        p_kind: kind, p_description: description, p_counterparty: counterparty,
+        p_category: category, p_total: (c / 100).toFixed(2), p_n: n,
+        p_first_due: due, p_notes: notes
+      });
     } else {
       const { data: u } = await sb.auth.getUser();
-      res = await sb.from("fin_entries").insert(Object.assign({ user_id: u.user.id }, row));
+      res = await sb.from("fin_entries").insert({
+        user_id: u.user.id, kind, description, counterparty, category, notes,
+        amount: (c / 100).toFixed(2), due_date: due
+      });
     }
     if (res.error) { setStatus("Não foi possível salvar: " + res.error.message); return; }
-    // Leva a tela ao mês e à aba do lançamento salvo, para ele não sumir da lista
-    month = row.due_date.slice(0, 7);
-    tab = row.kind;
+    month = due.slice(0, 7);
+    tab = kind;
     closeForm();
     await load();
-    setStatus("Lançamento salvo");
+    setStatus(n > 1 && !editId ? n + " parcelas criadas" : "Lançamento salvo");
   });
   $("f-cancel").addEventListener("click", closeForm);
   $("new-btn").addEventListener("click", newEntry);
   document.querySelectorAll("[data-tab]").forEach((b) => {
     b.addEventListener("click", () => { tab = b.dataset.tab; payOpenId = null; render(); });
+  });
+
+  // ---------- ações: caixa ----------
+  function resetCaixaForm() {
+    cxEditId = null;
+    $("cx-form").reset();
+    $("cx-tipo").value = "saida";
+    $("cx-date").value = todayStr();
+    $("cx-title").textContent = "Novo lançamento de caixa";
+    $("cx-submit").textContent = "Lançar";
+    $("cx-cancel").hidden = true;
+  }
+  function startCaixaEdit(m) {
+    cxEditId = m.id;
+    $("cx-tipo").value = m.tipo;
+    $("cx-desc").value = m.description;
+    $("cx-who").value = m.counterparty || "";
+    $("cx-cat").value = m.category || "";
+    $("cx-amount").value = (toCents(m.amount) / 100).toFixed(2).replace(".", ",");
+    $("cx-date").value = m.data;
+    $("cx-notes").value = m.notes || "";
+    $("cx-title").textContent = "Editar lançamento de caixa";
+    $("cx-submit").textContent = "Salvar alterações";
+    $("cx-cancel").hidden = false;
+    view = "caixa";
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  async function deleteMovement(m) {
+    const { error } = await sb.from("fin_movements").delete().eq("id", m.id);
+    if (error) { setStatus("Não foi possível excluir"); return; }
+    await load();
+    setStatus("Lançamento excluído");
+  }
+
+  $("cx-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const c = toCents($("cx-amount").value);
+    if (!(c > 0)) { setStatus("Informe um valor maior que zero"); return; }
+    const description = $("cx-desc").value.trim();
+    const data = $("cx-date").value;
+    if (!description || !data) { setStatus("Preencha descrição e data"); return; }
+    const row = {
+      tipo: $("cx-tipo").value,
+      description,
+      counterparty: $("cx-who").value.trim() || null,
+      category: $("cx-cat").value.trim() || null,
+      amount: (c / 100).toFixed(2),
+      data,
+      notes: $("cx-notes").value.trim() || null
+    };
+    let res;
+    if (cxEditId) {
+      res = await sb.from("fin_movements").update(row).eq("id", cxEditId);
+    } else {
+      const { data: u } = await sb.auth.getUser();
+      res = await sb.from("fin_movements").insert(Object.assign({ user_id: u.user.id }, row));
+    }
+    if (res.error) { setStatus("Não foi possível salvar: " + res.error.message); return; }
+    month = data.slice(0, 7);
+    resetCaixaForm();
+    await load();
+    setStatus("Lançamento de caixa salvo");
+  });
+  $("cx-cancel").addEventListener("click", () => { resetCaixaForm(); render(); });
+
+  // ---------- movimentações: filtros ----------
+  document.querySelectorAll("[data-mov]").forEach((b) => {
+    b.addEventListener("click", () => { movTipo = b.dataset.mov; render(); });
+  });
+  document.querySelectorAll("[data-origem]").forEach((b) => {
+    b.addEventListener("click", () => { movOrigem = b.dataset.origem; render(); });
+  });
+
+  // ---------- navegação e mês ----------
+  document.querySelectorAll("[data-view]").forEach((b) => {
+    b.addEventListener("click", () => { view = b.dataset.view; render(); });
   });
   $("month").addEventListener("change", () => {
     month = $("month").value || todayStr().slice(0, 7);
@@ -499,6 +781,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     $("auth").hidden = on;
     $("app").hidden = !on;
   }
+  resetCaixaForm();
   sb.auth.onAuthStateChange((event, session) => {
     if (session) { showApp(true); load(); } else { showApp(false); }
   });
