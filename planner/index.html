@@ -1,0 +1,1401 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Planner Diário</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: cabeçalho com data, grade de horas à esquerda, cartões à direita. */
+:root {
+  --bg: #f6f4ef;
+  --paper: #ffffff;
+  --ink: #1f2430;
+  --muted: #6b7180;
+  --line: #d9d6cc;
+  --accent: #2f6f6a;
+  --soft-yellow: #fbf1c4;
+  --soft-pink: #f7dbe3;
+  --soft-blue: #dfe6f7;
+  --soft-red: #f3d3cc;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161a22;
+    --paper: #1f2430;
+    --ink: #eceae3;
+    --muted: #9aa1b2;
+    --line: #3a4150;
+    --accent: #7fc4bd;
+    --soft-yellow: #3a3620;
+    --soft-pink: #3a2630;
+    --soft-blue: #242c40;
+    --soft-red: #3a2521;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161a22;
+  --paper: #1f2430;
+  --ink: #eceae3;
+  --muted: #9aa1b2;
+  --line: #3a4150;
+  --accent: #7fc4bd;
+  --soft-yellow: #3a3620;
+  --soft-pink: #3a2630;
+  --soft-blue: #242c40;
+  --soft-red: #3a2521;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Manrope", system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px;
+  box-sizing: border-box;
+}
+[hidden] { display: none !important; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--paper);
+  font-weight: 700;
+}
+button.ghost {
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--muted);
+  border-color: transparent;
+  background: transparent;
+}
+
+/* Login */
+#auth {
+  max-width: 360px;
+  margin: 12vh auto 0;
+  display: grid;
+  gap: 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+}
+#auth h1 { margin: 0; font-size: 20px; font-weight: 800; }
+#auth p { margin: 0; color: var(--muted); font-size: 14px; text-wrap: balance; }
+input[type="email"], input[type="text"], input[type="date"], input[type="time"], input[type="number"], select, textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+/* Cabeçalho */
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.date-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--soft-blue);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 12px;
+  min-width: 0;
+}
+.date-field span { font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; font-size: 12px; }
+.date-field input { background: transparent; border: none; padding: 4px; width: auto; min-width: 0; }
+.spacer { flex: 1; }
+.status { color: var(--muted); font-size: 13px; }
+
+/* Grade */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+@media (min-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+}
+.hours {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 14px;
+  display: grid;
+  gap: 0;
+  min-width: 0;
+  position: relative;
+}
+.hour {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: start;
+  gap: 0 10px;
+  height: 56px;
+  box-sizing: border-box;
+  padding: 0;
+  border-bottom: 1px dashed var(--line);
+}
+.hour:last-child { border-bottom: none; }
+.hour time { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); align-self: start; padding-top: 6px; }
+.hour input {
+  background: transparent;
+  border: none;
+  padding: 6px 2px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.hour input:focus-visible { border-radius: 4px; }
+
+/* Blocos de compromissos e prioridades dentro da grade */
+.timeline { position: absolute; top: 8px; bottom: 8px; left: 80px; right: 14px; pointer-events: none; }
+.hevent {
+  position: absolute;
+  box-sizing: border-box;
+  overflow: hidden;
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  background: var(--soft-blue);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 13px;
+  min-width: 0;
+}
+.hevent.prio { background: var(--soft-pink); border-left-color: var(--ink); }
+.hevent input[type="checkbox"] { width: 18px; height: 18px; margin: 0; }
+.hevent span { overflow-wrap: anywhere; }
+.hevent.done span { text-decoration: line-through; color: var(--muted); }
+.hevent.done { opacity: 0.7; }
+
+.side { display: grid; gap: 14px; min-width: 0; }
+.panel-menu { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.grid.solo { grid-template-columns: minmax(0, 1fr); }
+.panel-menu button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--paper); font-weight: 700; }
+.prio-toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.prio-toggle input { width: 18px; height: 18px; margin: 0; }
+.matrix { color: var(--muted); font-size: 12px; margin: 0; line-height: 1.5; }
+.hevent.lvl-urgente { background: var(--soft-red); border-left-color: #c2410c; }
+.hevent.lvl-importante { background: var(--soft-yellow); }
+.hevent.lvl-normal { background: var(--soft-blue); }
+.hevent.reuniao { background: color-mix(in srgb, #2f8f5b 22%, var(--paper)); border-left-color: #2f8f5b; }
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-width: 0;
+}
+.card h2 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.card.reminders { background: color-mix(in srgb, #2f8f5b 16%, var(--paper)); }
+.card.prios { background: var(--soft-blue); }
+.card.compromissos { background: var(--paper); }
+.card.notas { background: color-mix(in srgb, #5aa9e6 18%, var(--paper)); }
+.card textarea { background: var(--paper); min-height: 110px; resize: vertical; }
+.note { color: var(--muted); font-size: 12px; margin: -4px 0 10px; }
+.prio-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 76px 76px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.prio-row input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
+.prio-row input[type="text"] { background: transparent; border: none; border-bottom: 1px dashed var(--line); border-radius: 0; padding: 6px 2px; }
+.prio-row input[type="time"] { background: var(--paper); padding: 4px 4px; font-size: 13px; min-width: 0; }
+
+/* Compromissos (lista de gerenciamento) */
+.event-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.event-row:last-child { border-bottom: none; }
+.event-row input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
+.event-text { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.event-text small { color: var(--muted); display: block; font-size: 12px; }
+.cats { display: grid; gap: 8px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.cat-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cat-row .name { font-weight: 800; min-width: 90px; }
+.cat-row .ghost { font-size: 12px; }
+.cat-new { display: grid; gap: 8px; }
+.palette { display: flex; flex-wrap: wrap; gap: 6px; }
+.swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; padding: 0; cursor: pointer; }
+.swatch[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 2px var(--paper); }
+#cat-add { justify-self: start; }
+#cats-screen { max-width: 640px; margin: 0 auto; }
+#cats-screen .card { display: grid; gap: 12px; }
+.screen-title { margin: 0; font-size: 18px; font-weight: 800; }
+#dash-screen { max-width: 720px; margin: 0 auto; }
+#dash-screen .card { display: grid; gap: 8px; }
+.total { margin: 0 0 4px; font-weight: 800; font-size: 16px; }
+.cat-group { border-bottom: 1px solid var(--line); padding: 4px 0; }
+.cat-group:last-child { border-bottom: none; }
+.cat-head { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: none; padding: 8px 0; cursor: pointer; text-align: left; }
+.cat-head .label { font-weight: 800; min-width: 110px; }
+.bar { flex: 1; height: 12px; background: var(--soft-blue); border-radius: 6px; overflow: hidden; min-width: 40px; }
+.bar > span { display: block; height: 100%; }
+.cat-head .time, .task-row .time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.task-rows { display: grid; gap: 6px; padding: 2px 0 8px 14px; }
+.task-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.task-row .name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.cat-block { display: grid; gap: 6px; padding-bottom: 10px; border-bottom: 1px dashed var(--line); }
+.sub-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; background: var(--soft-blue); border-radius: 999px; padding: 2px 4px 2px 10px; font-size: 13px; }
+.chip .ghost { padding: 0 6px; font-size: 14px; }
+.sub-add { display: flex; gap: 8px; flex-wrap: wrap; }
+.sub-add input { flex: 1; min-width: 140px; }
+.sub-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; background: none; border: none; padding: 6px 0; cursor: pointer; font-weight: 700; color: var(--ink); text-align: left; }
+.sub-task { padding-left: 14px; }
+.timer { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.clock { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); margin-right: 4px; }
+.timer small { color: var(--muted); font-size: 12px; }
+.timer-btn { color: #fff; border: none; font-weight: 700; padding: 6px 12px; }
+.timer-btn.start { background: #2f8f5b; }
+.timer-btn.pause { background: #e0a800; color: #1f2430; }
+.timer-btn.end { background: #c0392b; }
+.empty { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+.event-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.event-form .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.event-form .hint { color: var(--muted); font-size: 12px; margin: 0; }
+</style>
+
+<main>
+  <section id="auth" hidden>
+    <h1>Planner Diário</h1>
+    <p>Digite seu e-mail. Você recebe um código de 8 dígitos para entrar. A mesma conta funciona no iPad, Mac e iPhone.</p>
+    <input id="email" type="email" placeholder="seu@email.com" autocomplete="email">
+    <button id="send-code" class="primary" type="button">Enviar código</button>
+    <input id="code" type="text" inputmode="numeric" maxlength="8" placeholder="Código de 8 dígitos" autocomplete="one-time-code" hidden>
+    <button id="verify" class="primary" type="button" hidden>Entrar</button>
+    <p id="auth-msg" role="status"></p>
+  </section>
+
+  <section id="app" hidden>
+    <header class="top">
+      <button id="prev" type="button" aria-label="Dia anterior">‹</button>
+      <label class="date-field">
+        <span>Data</span>
+        <input id="date" type="date" aria-label="Escolher data">
+      </label>
+      <button id="next" type="button" aria-label="Próximo dia">›</button>
+      <button id="today" type="button">Hoje</button>
+      <span class="spacer"></span>
+      <span id="status" class="status" role="status"></span>
+      <a href="../" style="align-self:center;font-weight:700">‹ Início</a>
+      <button id="open-cats" type="button">Categorias</button>
+      <button id="logout" type="button">Sair</button>
+    </header>
+
+    <nav class="panel-menu" aria-label="Painéis">
+      <button type="button" data-toggle="lembretes" aria-pressed="false">Lembretes</button>
+      <button type="button" data-toggle="tarefas" aria-pressed="false">Tarefas</button>
+      <button type="button" data-toggle="notas" aria-pressed="false">Notas</button>
+      <button id="open-dash" type="button">Dashboard</button>
+    </nav>
+
+    <div class="grid">
+      <section class="hours" aria-label="Horários">
+        <div class="hour"><time>00:00</time><input data-field="h00" aria-label="00:00"></div>
+        <div class="hour"><time>01:00</time><input data-field="h01" aria-label="01:00"></div>
+        <div class="hour"><time>02:00</time><input data-field="h02" aria-label="02:00"></div>
+        <div class="hour"><time>03:00</time><input data-field="h03" aria-label="03:00"></div>
+        <div class="hour"><time>04:00</time><input data-field="h04" aria-label="04:00"></div>
+        <div class="hour"><time>05:00</time><input data-field="h05" aria-label="05:00"></div>
+        <div class="hour"><time>06:00</time><input data-field="h06" aria-label="06:00"></div>
+        <div class="hour"><time>07:00</time><input data-field="h07" aria-label="07:00"></div>
+        <div class="hour"><time>08:00</time><input data-field="h08" aria-label="08:00"></div>
+        <div class="hour"><time>09:00</time><input data-field="h09" aria-label="09:00"></div>
+        <div class="hour"><time>10:00</time><input data-field="h10" aria-label="10:00"></div>
+        <div class="hour"><time>11:00</time><input data-field="h11" aria-label="11:00"></div>
+        <div class="hour"><time>12:00</time><input data-field="h12" aria-label="12:00"></div>
+        <div class="hour"><time>13:00</time><input data-field="h13" aria-label="13:00"></div>
+        <div class="hour"><time>14:00</time><input data-field="h14" aria-label="14:00"></div>
+        <div class="hour"><time>15:00</time><input data-field="h15" aria-label="15:00"></div>
+        <div class="hour"><time>16:00</time><input data-field="h16" aria-label="16:00"></div>
+        <div class="hour"><time>17:00</time><input data-field="h17" aria-label="17:00"></div>
+        <div class="hour"><time>18:00</time><input data-field="h18" aria-label="18:00"></div>
+        <div class="hour"><time>19:00</time><input data-field="h19" aria-label="19:00"></div>
+        <div class="hour"><time>20:00</time><input data-field="h20" aria-label="20:00"></div>
+        <div class="hour"><time>21:00</time><input data-field="h21" aria-label="21:00"></div>
+        <div class="hour"><time>22:00</time><input data-field="h22" aria-label="22:00"></div>
+        <div class="hour"><time>23:00</time><input data-field="h23" aria-label="23:00"></div>
+      </section>
+
+      <div class="side">
+        <section class="card reminders" data-panel="lembretes" hidden>
+          <h2>Lembretes</h2>
+          <textarea data-field="lembretes" aria-label="Lembretes"></textarea>
+        </section>
+        <section class="card compromissos" data-panel="tarefas" hidden>
+          <h2>Tarefas</h2>
+          <div id="events-list"></div>
+          <form id="event-form" class="event-form">
+            <input id="ev-title" type="text" placeholder="Tarefa" aria-label="Título da tarefa" required>
+            <div class="pair">
+              <input id="ev-startdate" type="date" aria-label="Data de início">
+              <input id="ev-enddate" type="date" aria-label="Data de fim (opcional)">
+            </div>
+            <div class="pair">
+              <input id="ev-start" type="time" aria-label="Início" required>
+              <input id="ev-end" type="time" aria-label="Fim">
+            </div>
+            <select id="ev-repeat" aria-label="Repetir">
+              <option value="none">Não repete</option>
+              <option value="daily">Todos os dias</option>
+              <option value="weekdays">Dias úteis (seg a sex)</option>
+              <option value="weekly">Semanal (mesmo dia da semana)</option>
+            </select>
+            <select id="ev-category" aria-label="Categoria">
+              <option value="">Sem categoria</option>
+            </select>
+            <select id="ev-subcategory" aria-label="Subcategoria">
+              <option value="">Sem subcategoria</option>
+            </select>
+            <select id="ev-kind" aria-label="Tipo">
+              <option value="tarefa">Tarefa</option>
+              <option value="reuniao">Reunião (verde na agenda)</option>
+            </select>
+            <label class="prio-toggle"><input id="ev-priority" type="checkbox"> Tarefa prioritária</label>
+            <select id="ev-level" aria-label="Nível de prioridade" hidden>
+              <option value="urgente">Urgente: importante e urgente, fazer agora</option>
+              <option value="importante">Importante: não urgente, agendar</option>
+              <option value="normal">Normal: demais tarefas</option>
+            </select>
+            <p class="matrix">Matriz de priorização (Eisenhower): Urgente = importante e urgente. Importante = importante, sem pressão de prazo. Normal = o resto, que pode ser delegado ou eliminado.</p>
+            <p class="hint">Começa no dia selecionado acima. Marque o checkbox em cada dia em que concluir.</p>
+            <button id="ev-submit" class="primary" type="submit">Adicionar tarefa</button>
+            <button id="ev-cancel" type="button" hidden>Cancelar edição</button>
+          </form>
+        </section>
+
+        <section class="card notas" data-panel="notas" hidden>
+          <h2>Notas</h2>
+          <textarea data-field="notas" aria-label="Notas"></textarea>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <section id="cats-screen" hidden>
+    <header class="top">
+      <button id="cats-back" type="button">‹ Voltar</button>
+      <h1 class="screen-title">Categorias</h1>
+    </header>
+    <div class="card">
+      <p class="note">Escolha uma cor para cada categoria, ou crie novas.</p>
+      <div id="cat-list"></div>
+      <div class="cat-new">
+        <input id="cat-name" type="text" placeholder="Nova categoria" aria-label="Nome da nova categoria">
+        <div id="cat-palette"></div>
+        <button id="cat-add" type="button" class="primary">Criar categoria</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="dash-screen" hidden>
+    <header class="top">
+      <button id="dash-back" type="button">‹ Voltar</button>
+      <h1 class="screen-title">Tempo por atividade</h1>
+      <span class="spacer"></span>
+      <select id="dash-range" aria-label="Período">
+        <option value="1">Hoje</option>
+        <option value="7" selected>Últimos 7 dias</option>
+        <option value="30">Últimos 30 dias</option>
+      </select>
+    </header>
+    <div class="card">
+      <p id="dash-total" class="total"></p>
+      <div id="dash-cats"></div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(function () {
+  const SUPABASE_URL = "https://llfthqksekwgxczihpdh.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_Fs2Rdx-h_kuMW-fUnZRj2g_d5It1BgM";
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const $ = (id) => document.getElementById(id);
+  const authEl = $("auth"), appEl = $("app");
+  const statusEl = $("status"), authMsg = $("auth-msg");
+  const dateEl = $("date");
+  const listEl = $("events-list");
+
+  // Camada única sobre a grade: cada compromisso/prioridade vira um bloco contínuo.
+  const timeline = document.createElement("div");
+  timeline.className = "timeline";
+  document.querySelector(".hours").append(timeline);
+  const ROW_H = 56;          // altura fixa de cada linha de hora (px)
+  const DAY_START = 0;       // primeira linha: 00:00
+  const DAY_ROWS = 24;       // 00:00 até 23:00
+
+  // Separa blocos que se sobrepõem em faixas lado a lado e posiciona cada um.
+  function layoutItems(items) {
+    items.sort((a, b) => a.r.start - b.r.start);
+    const placed = [];
+    let cluster = [];
+    let clusterEnd = -1;
+    const flush = () => {
+      const lanes = [];
+      cluster.forEach((it) => {
+        let lane = lanes.findIndex((end) => end <= it.r.start);
+        if (lane === -1) { lane = lanes.length; lanes.push(it.r.end); } else { lanes[lane] = it.r.end; }
+        it.lane = lane;
+      });
+      cluster.forEach((it) => { it.lanes = lanes.length; placed.push(it); });
+      cluster = [];
+    };
+    items.forEach((it) => {
+      if (cluster.length && it.r.start >= clusterEnd) flush();
+      cluster.push(it);
+      clusterEnd = Math.max(clusterEnd, it.r.end);
+    });
+    flush();
+    placed.forEach((it) => {
+      const top = Math.max(0, (it.r.start - DAY_START) / 60 * ROW_H);
+      const bottom = Math.min(DAY_ROWS * ROW_H, (it.r.end - DAY_START) / 60 * ROW_H);
+      if (bottom <= top) return;
+      const el = it.el;
+      el.style.top = top + "px";
+      el.style.height = Math.max(bottom - top, 26) + "px";
+      el.style.width = "calc(" + (100 / it.lanes) + "% - 4px)";
+      el.style.left = (it.lane * 100 / it.lanes) + "%";
+      timeline.append(el);
+    });
+  }
+
+  let currentDay = todayStr();
+  let saveTimer = null;
+  let loadToken = 0;
+  let suppressSave = false;
+  let events = [];          // compromissos (série) do usuário
+  let doneEvents = {};
+  let timers = {};
+  let categories = [];      // categorias do usuário: { id, name, color }
+  const PALETTE = ["#2f8f5b", "#5aa9e6", "#8a5cc2", "#e0a800", "#e67e22", "#c0392b", "#16a085", "#34495e", "#d63384", "#7f8c8d"];
+  let newCatColor = PALETTE[0];
+  let subcats = [];         // subcategorias: { id, category_id, name }          // cronômetro por tarefa neste dia: { total, runningSince, finished }      // compromissos concluídos no dia atual: { [eventId]: true }
+
+  function todayStr() {
+    return new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD no fuso local
+  }
+  function shiftDay(day, n) {
+    const d = new Date(day + "T12:00:00");
+    d.setDate(d.getDate() + n);
+    return d.toLocaleDateString("en-CA");
+  }
+  function weekdayOf(day) {
+    return new Date(day + "T12:00:00").getDay();
+  }
+  function toMin(hhmm) {
+    const [h, m] = hhmm.split(":").map(Number);
+    return h * 60 + m;
+  }
+
+  function emptyData() {
+    return { fields: {}, checks: {}, doneEvents: {} };
+  }
+  function collect() {
+    const data = emptyData();
+    document.querySelectorAll("[data-field]").forEach((el) => { data.fields[el.dataset.field] = el.value; });
+    document.querySelectorAll("[data-check]").forEach((el) => { data.checks[el.dataset.check] = el.checked; });
+    data.doneEvents = Object.assign({}, doneEvents);
+    data.timers = Object.assign({}, timers);
+    return data;
+  }
+  function fill(data) {
+    suppressSave = true;
+    const d = data || emptyData();
+    document.querySelectorAll("[data-field]").forEach((el) => { el.value = (d.fields && d.fields[el.dataset.field]) || ""; });
+    document.querySelectorAll("[data-check]").forEach((el) => { el.checked = !!(d.checks && d.checks[el.dataset.check]); });
+    doneEvents = Object.assign({}, d.doneEvents || {});
+    timers = Object.assign({}, d.timers || {});
+    suppressSave = false;
+    renderEvents();
+  }
+
+  function cacheKey(day) { return "planner-cache:" + day; }
+  function readCache(day) {
+    try { const raw = localStorage.getItem(cacheKey(day)); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  }
+  function writeCache(day, data) {
+    try { localStorage.setItem(cacheKey(day), JSON.stringify(data)); } catch (e) {}
+  }
+
+  function setStatus(text) { statusEl.textContent = text; }
+
+  // Um compromisso aparece no dia se o dia cai na regra de repetição a partir da data inicial.
+  function occurs(ev, day) {
+    if (day < ev.starts_on) return false;
+    if (ev.ends_on && day > ev.ends_on) return false;
+    const dow = weekdayOf(day);
+    switch (ev.repeat_rule) {
+      case "daily": return true;
+      case "weekdays": return dow >= 1 && dow <= 5;
+      case "weekly": return dow === weekdayOf(ev.starts_on);
+      default: return day === ev.starts_on;
+    }
+  }
+
+  // Intervalo em minutos. Sem fim, vale 1 hora.
+  function rangeOf(startHHMM, endHHMM) {
+    const start = toMin(startHHMM);
+    const end = endHHMM ? toMin(endHHMM) : start + 60;
+    return { start: start, end: Math.max(end, start + 15) };
+  }
+  // A linha de hora H cobre o bloco se houver sobreposição com [H:00, H+1:00).
+  function covers(hour, r) {
+    return hour * 60 < r.end && (hour + 1) * 60 > r.start;
+  }
+
+  const LEVELS = {
+    urgente: { label: "Urgente" },
+    importante: { label: "Importante" },
+    normal: { label: "Normal" }
+  };
+  function repeatLabel(rule) {
+    return { none: "", daily: "todos os dias", weekdays: "dias úteis", weekly: "semanal" }[rule] || "";
+  }
+  function timeRange(startHHMM, endHHMM) {
+    return startHHMM.slice(0, 5) + (endHHMM ? " – " + endHHMM.slice(0, 5) : "");
+  }
+
+  function toggleDone(ev, checked) {
+    if (checked) doneEvents[ev.id] = true; else delete doneEvents[ev.id];
+    scheduleSave();
+    renderEvents();
+  }
+
+  // Bloco de compromisso dentro de uma linha de hora
+  function agendaItem(ev) {
+    const wrap = document.createElement("div");
+    wrap.className = "hevent" + (doneEvents[ev.id] ? " done" : "") + (ev.is_priority ? " lvl-" + ev.priority_level : "") + (ev.kind === "reuniao" ? " reuniao" : "");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!doneEvents[ev.id];
+    cb.setAttribute("aria-label", "Concluído: " + ev.title);
+    cb.addEventListener("change", () => toggleDone(ev, cb.checked));
+    const label = document.createElement("span");
+    label.textContent = (catLabel(ev) ? catLabel(ev) + " · " : "") +(ev.kind === "reuniao" ? "Reunião · " : "") +(ev.is_priority ? LEVELS[ev.priority_level].label + " · " : "") + timeRange(ev.start_time, ev.end_time) + "  " + ev.title;
+    const cat = catById(ev.category_id);
+    if (cat) wrap.style.borderLeftColor = cat.color;
+    wrap.append(cb, label);
+    return wrap;
+  }
+
+  // Linha da lista de gerenciamento (com excluir)
+  function listRow(ev) {
+    const row = document.createElement("div");
+    row.className = "event-row";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!doneEvents[ev.id];
+    cb.setAttribute("aria-label", "Concluído: " + ev.title);
+    cb.addEventListener("change", () => toggleDone(ev, cb.checked));
+
+    const text = document.createElement("div");
+    text.className = "event-text";
+    text.append(timeRange(ev.start_time, ev.end_time) + "  " + ev.title);
+    const catRow = catById(ev.category_id);
+    if (catRow) {
+      const cs = document.createElement("small");
+      cs.textContent = "Categoria: " + catLabel(ev);
+      cs.style.color = catRow.color;
+      text.append(cs);
+    }
+    if (ev.is_priority) {
+      const lvl = document.createElement("small");
+      lvl.textContent = "Prioridade: " + LEVELS[ev.priority_level].label;
+      text.append(lvl);
+    }
+    if (ev.kind === "reuniao") {
+      const kind = document.createElement("small");
+      kind.textContent = "Reunião";
+      text.append(kind);
+    }
+    const rep = repeatLabel(ev.repeat_rule);
+    if (rep) {
+      const small = document.createElement("small");
+      small.textContent = "Repete: " + rep;
+      text.append(small);
+    }
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "ghost";
+    del.textContent = "Excluir série";
+    del.addEventListener("click", () => {
+      if (!del.dataset.armed) {
+        del.dataset.armed = "1";
+        del.textContent = "Confirmar";
+        setTimeout(() => { delete del.dataset.armed; del.textContent = "Excluir série"; }, 4000);
+        return;
+      }
+      deleteEvent(ev);
+    });
+
+    const bar = timerControl(ev);
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "ghost";
+    edit.textContent = "Editar";
+    edit.addEventListener("click", () => startEdit(ev));
+    bar.append(edit);
+    text.append(bar);
+    row.append(cb, text, del);
+    return row;
+  }
+
+  // Categorias: lista inicial na primeira vez; depois o usuário cria, recolore e exclui
+  const DEFAULT_CATS = [
+    { name: "Fiserv", color: "#34495e" },
+    { name: "Estudo", color: "#5aa9e6" },
+    { name: "Projetos", color: "#8a5cc2" },
+    { name: "Igreja", color: "#e67e22" }
+  ];
+  // Uma carga por vez: evita semear as categorias padrão duas vezes ao entrar
+  let catPromise = null;
+  function loadCategories() {
+    if (!catPromise) catPromise = doLoadCategories().finally(() => { catPromise = null; });
+    return catPromise;
+  }
+  async function doLoadCategories() {
+    try {
+      const { data, error } = await sb.from("planner_categories").select("*").order("created_at", { ascending: true });
+      if (error) throw error;
+      if (!data.length) {
+        const { data: userData } = await sb.auth.getUser();
+        const { error: insErr } = await sb.from("planner_categories")
+          .insert(DEFAULT_CATS.map((c) => Object.assign({ user_id: userData.user.id }, c)));
+        if (insErr) throw insErr;
+        return doLoadCategories();
+      }
+      categories = data;
+    } catch (e) {
+      setStatus("Sem conexão: categorias podem estar desatualizadas");
+    }
+    renderCategories();
+  }
+  function catById(id) {
+    return categories.find((c) => c.id === id);
+  }
+  function paletteEl(selected, onPick) {
+    const wrap = document.createElement("div");
+    wrap.className = "palette";
+    PALETTE.forEach((color) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "swatch";
+      b.style.background = color;
+      b.setAttribute("aria-label", "Cor " + color);
+      b.setAttribute("aria-pressed", String(color === selected));
+      b.addEventListener("click", () => onPick(color));
+      wrap.append(b);
+    });
+    return wrap;
+  }
+  function renderCategories() {
+    const sel = $("ev-category");
+    const current = sel.value;
+    sel.textContent = "";
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "Sem categoria";
+    sel.append(none);
+    categories.forEach((c) => {
+      const o = document.createElement("option");
+      o.value = c.id;
+      o.textContent = c.name;
+      sel.append(o);
+    });
+    sel.value = current;
+
+    const list = $("cat-list");
+    list.textContent = "";
+    categories.forEach((c) => {
+      const row = document.createElement("div");
+      row.className = "cat-row";
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = c.name;
+      name.style.color = c.color;
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "ghost";
+      del.textContent = "Excluir";
+      del.addEventListener("click", () => {
+        if (!del.dataset.armed) {
+          del.dataset.armed = "1";
+          del.textContent = "Confirmar";
+          setTimeout(() => { delete del.dataset.armed; del.textContent = "Excluir"; }, 4000);
+          return;
+        }
+        deleteCategory(c);
+      });
+      row.append(name, paletteEl(c.color, (color) => updateCategory(c, { color: color })), del);
+      const block = document.createElement("div");
+      block.className = "cat-block";
+      const subList = document.createElement("div");
+      subList.className = "sub-list";
+      subcats.filter((s) => s.category_id === c.id).forEach((s) => {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.textContent = s.name;
+        const x = document.createElement("button");
+        x.type = "button";
+        x.className = "ghost";
+        x.textContent = "×";
+        x.setAttribute("aria-label", "Excluir subcategoria " + s.name);
+        x.addEventListener("click", () => deleteSubcategory(s));
+        chip.append(x);
+        subList.append(chip);
+      });
+      const addRow = document.createElement("div");
+      addRow.className = "sub-add";
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.placeholder = "Nova subcategoria";
+      inp.setAttribute("aria-label", "Nova subcategoria de " + c.name);
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.textContent = "Adicionar";
+      addBtn.addEventListener("click", () => createSubcategory(c, inp.value));
+      addRow.append(inp, addBtn);
+      block.append(row, subList, addRow);
+      list.append(block);
+    });
+
+    const np = $("cat-palette");
+    np.textContent = "";
+    np.append(paletteEl(newCatColor, (color) => { newCatColor = color; renderCategories(); }));
+    renderSubSelect();
+  }
+  async function createCategory() {
+    const name = $("cat-name").value.trim();
+    if (!name) { setStatus("Digite o nome da categoria"); return; }
+    try {
+      const { data: userData } = await sb.auth.getUser();
+      const { error } = await sb.from("planner_categories")
+        .insert({ user_id: userData.user.id, name: name, color: newCatColor });
+      if (error) throw error;
+      $("cat-name").value = "";
+      await loadCategories();
+      setStatus("Categoria criada");
+    } catch (e) {
+      setStatus("Não foi possível criar a categoria");
+    }
+  }
+  async function updateCategory(c, patch) {
+    try {
+      const { error } = await sb.from("planner_categories").update(patch).eq("id", c.id);
+      if (error) throw error;
+      await loadCategories();
+      renderEvents();
+    } catch (e) {
+      setStatus("Não foi possível alterar a categoria");
+    }
+  }
+  async function deleteCategory(c) {
+    try {
+      const { error } = await sb.from("planner_categories").delete().eq("id", c.id);
+      if (error) throw error;
+      await loadCategories();
+      await loadEvents();
+      setStatus("Categoria excluída");
+    } catch (e) {
+      setStatus("Não foi possível excluir a categoria");
+    }
+  }
+
+  // Subcategorias: pertencem a uma categoria (ex.: Fiserv → Planejamento, Execução)
+  async function loadSubcats() {
+    try {
+      const { data, error } = await sb.from("planner_subcategories").select("*").order("created_at", { ascending: true });
+      if (error) throw error;
+      subcats = data || [];
+    } catch (e) {
+      setStatus("Sem conexão: subcategorias podem estar desatualizadas");
+    }
+    renderCategories();
+  }
+  async function createSubcategory(c, name) {
+    name = (name || "").trim();
+    if (!name) { setStatus("Digite o nome da subcategoria"); return; }
+    try {
+      const { data: userData } = await sb.auth.getUser();
+      const { error } = await sb.from("planner_subcategories")
+        .insert({ user_id: userData.user.id, category_id: c.id, name: name });
+      if (error) throw error;
+      await loadSubcats();
+      setStatus("Subcategoria criada");
+    } catch (e) {
+      setStatus("Não foi possível criar a subcategoria");
+    }
+  }
+  async function deleteSubcategory(s) {
+    try {
+      const { error } = await sb.from("planner_subcategories").delete().eq("id", s.id);
+      if (error) throw error;
+      await loadSubcats();
+      await loadEvents();
+      setStatus("Subcategoria excluída");
+    } catch (e) {
+      setStatus("Não foi possível excluir a subcategoria");
+    }
+  }
+  function renderSubSelect() {
+    const sel = $("ev-subcategory");
+    const current = sel.value;
+    sel.textContent = "";
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "Sem subcategoria";
+    sel.append(none);
+    subcats.filter((s) => s.category_id === $("ev-category").value).forEach((s) => {
+      const o = document.createElement("option");
+      o.value = s.id;
+      o.textContent = s.name;
+      sel.append(o);
+    });
+    sel.value = current;
+  }
+  function catLabel(ev) {
+    const c = catById(ev.category_id);
+    if (!c) return "";
+    const s = subcats.find((x) => x.id === ev.subcategory_id);
+    return s ? c.name + " › " + s.name : c.name;
+  }
+
+  // Cronômetro por tarefa: iniciar, pausar, retomar e finalizar
+  function timerMs(id) {
+    const t = timers[id];
+    if (!t) return 0;
+    return (t.total || 0) + (t.runningSince ? Date.now() - t.runningSince : 0);
+  }
+  function fmtClock(ms) {
+    const s = Math.floor(ms / 1000);
+    return [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60]
+      .map((n) => String(n).padStart(2, "0")).join(":");
+  }
+  function setTimer(id, action) {
+    const now = Date.now();
+    const t = timers[id] || { total: 0, runningSince: null, finished: false };
+    if (action === "start" || action === "resume") {
+      if (!t.runningSince && !t.finished) t.runningSince = now;
+    } else {
+      if (t.runningSince) { t.total += now - t.runningSince; t.runningSince = null; }
+      if (action === "end") t.finished = true;
+    }
+    timers[id] = t;
+    scheduleSave();
+    renderEvents();
+  }
+  function timerControl(ev) {
+    const t = timers[ev.id] || {};
+    const wrap = document.createElement("div");
+    wrap.className = "timer";
+    const clock = document.createElement("span");
+    clock.className = "clock";
+    clock.dataset.id = ev.id;
+    clock.textContent = fmtClock(timerMs(ev.id));
+    wrap.append(clock);
+    const btn = (label, action) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "timer-btn " + (action === "pause" ? "pause" : action === "end" ? "end" : "start");
+      b.textContent = label;
+      b.addEventListener("click", () => setTimer(ev.id, action));
+      return b;
+    };
+    if (t.finished) {
+      const done = document.createElement("small");
+      done.textContent = "finalizada";
+      wrap.append(done);
+    } else if (t.runningSince) {
+      wrap.append(btn("Pausar", "pause"), btn("Finalizar", "end"));
+    } else if (t.total > 0) {
+      wrap.append(btn("Retomar", "resume"), btn("Finalizar", "end"));
+    } else {
+      wrap.append(btn("Iniciar", "start"));
+    }
+    return wrap;
+  }
+  setInterval(() => {
+    document.querySelectorAll(".clock[data-id]").forEach((el) => {
+      el.textContent = fmtClock(timerMs(el.dataset.id));
+    });
+  }, 1000);
+
+  function renderEvents() {
+    timeline.textContent = "";
+    listEl.textContent = "";
+    const items = [];
+
+    // Compromissos: aparecem em todas as horas que o bloco ocupa
+    const todays = events
+      .filter((ev) => occurs(ev, currentDay))
+      .sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+    if (!todays.length) {
+      const p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = "Nenhuma tarefa neste dia.";
+      listEl.append(p);
+    }
+
+    todays.forEach((ev) => {
+      items.push({ r: rangeOf(ev.start_time, ev.end_time), el: agendaItem(ev) });
+      listEl.append(listRow(ev));
+    });
+
+    layoutItems(items);
+  }
+
+  async function loadEvents() {
+    try {
+      const { data, error } = await sb.from("planner_events").select("*").order("start_time", { ascending: true });
+      if (error) throw error;
+      events = data || [];
+    } catch (e) {
+      setStatus("Sem conexão: compromissos podem estar desatualizados");
+    }
+    renderEvents();
+  }
+
+  // Edição: o formulário é preenchido com a tarefa e o botão salva as alterações
+  let editingId = null;
+  function startEdit(ev) {
+    editingId = ev.id;
+    $("ev-title").value = ev.title;
+    $("ev-startdate").value = ev.starts_on;
+    $("ev-enddate").value = ev.ends_on || "";
+    $("ev-start").value = ev.start_time.slice(0, 5);
+    $("ev-end").value = ev.end_time ? ev.end_time.slice(0, 5) : "";
+    $("ev-repeat").value = ev.repeat_rule;
+    $("ev-kind").value = ev.kind || "tarefa";
+    $("ev-category").value = ev.category_id || "";
+    renderSubSelect();
+    $("ev-subcategory").value = ev.subcategory_id || "";
+    $("ev-priority").checked = !!ev.is_priority;
+    $("ev-level").value = ev.priority_level || "normal";
+    $("ev-level").hidden = !ev.is_priority;
+    $("ev-submit").textContent = "Salvar alterações";
+    $("ev-cancel").hidden = false;
+    $("ev-title").focus();
+    window.scrollTo({ top: $("event-form").getBoundingClientRect().top + window.scrollY - 80, behavior: "smooth" });
+  }
+  function resetForm() {
+    editingId = null;
+    $("event-form").reset();
+    renderSubSelect();
+    $("ev-startdate").value = currentDay;
+    $("ev-level").hidden = true;
+    $("ev-submit").textContent = "Adicionar tarefa";
+    $("ev-cancel").hidden = true;
+  }
+
+  async function addEvent(e) {
+    e.preventDefault();
+    const title = $("ev-title").value.trim();
+    const start = $("ev-start").value;
+    const end = $("ev-end").value;
+    const repeat = $("ev-repeat").value;
+    const isPrio = $("ev-priority").checked;
+    const level = $("ev-level").value;
+    const kind = $("ev-kind").value;
+    const startDate = $("ev-startdate").value || currentDay;
+    const endDate = $("ev-enddate").value || null;
+    if (endDate && endDate < startDate) { setStatus("A data de fim é anterior à de início"); return; }
+    if (!title || !start) return;
+    try {
+      const { data: userData } = await sb.auth.getUser();
+      if (!userData || !userData.user) throw new Error("sem sessão");
+      const fields = {
+        user_id: userData.user.id,
+        title: title,
+        start_time: start,
+        end_time: end || null,
+        repeat_rule: repeat,
+        starts_on: startDate,
+        ends_on: endDate,
+        kind: kind,
+        category_id: $("ev-category").value || null,
+        subcategory_id: $("ev-subcategory").value || null,
+        is_priority: isPrio,
+        priority_level: isPrio ? level : null
+      };
+      const { error } = editingId
+        ? await sb.from("planner_events").update(fields).eq("id", editingId)
+        : await sb.from("planner_events").insert(fields);
+      if (error) throw error;
+      $("ev-title").value = "";
+      $("ev-start").value = "";
+      $("ev-end").value = "";
+      $("ev-repeat").value = "none";
+      $("ev-priority").checked = false;
+      $("ev-kind").value = "tarefa";
+      $("ev-enddate").value = "";
+      $("ev-startdate").value = currentDay;
+      $("ev-level").hidden = true;
+      await loadEvents();
+      resetForm();
+      setStatus("Tarefa salva");
+    } catch (err) {
+      setStatus("Não foi possível adicionar o compromisso");
+    }
+  }
+
+  async function deleteEvent(ev) {
+    try {
+      const { error } = await sb.from("planner_events").delete().eq("id", ev.id);
+      if (error) throw error;
+      await loadEvents();
+      setStatus("Compromisso excluído");
+    } catch (err) {
+      setStatus("Não foi possível excluir o compromisso");
+    }
+  }
+
+  async function loadDay(day) {
+    const token = ++loadToken;
+    dateEl.value = day;
+    $("ev-startdate").value = day;
+    const cached = readCache(day);
+    fill(cached);
+    setStatus("Carregando…");
+    try {
+      const { data, error } = await sb.from("planner_days").select("data").eq("day", day).maybeSingle();
+      if (token !== loadToken) return;
+      if (error) throw error;
+      const remote = data ? data.data : null;
+      fill(remote || cached);
+      writeCache(day, remote || cached || emptyData());
+      setStatus("Sincronizado");
+    } catch (e) {
+      if (token !== loadToken) return;
+      setStatus("Sem conexão: usando cópia local");
+    }
+  }
+
+  async function saveDay() {
+    const day = currentDay;
+    const data = collect();
+    writeCache(day, data);
+    setStatus("Salvando…");
+    try {
+      const { data: userData } = await sb.auth.getUser();
+      if (!userData || !userData.user) throw new Error("sem sessão");
+      const { error } = await sb.from("planner_days").upsert(
+        { user_id: userData.user.id, day: day, data: data, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,day" }
+      );
+      if (error) throw error;
+      setStatus("Salvo");
+    } catch (e) {
+      setStatus("Salvo localmente. Será enviado quando houver conexão.");
+    }
+  }
+
+  function scheduleSave() {
+    if (suppressSave) return;
+    clearTimeout(saveTimer);
+    setStatus("Editando…");
+    saveTimer = setTimeout(saveDay, 600);
+  }
+
+  function changeDay(day) {
+    if (day === currentDay && dateEl.value === day) return;
+    currentDay = day;
+    loadDay(day);
+  }
+
+  document.querySelectorAll("[data-field], [data-check]").forEach((el) => {
+    el.addEventListener(el.type === "checkbox" ? "change" : "input", scheduleSave);
+  });
+  dateEl.addEventListener("change", () => { if (dateEl.value) changeDay(dateEl.value); });
+  $("prev").addEventListener("click", () => changeDay(shiftDay(currentDay, -1)));
+  $("next").addEventListener("click", () => changeDay(shiftDay(currentDay, 1)));
+  $("today").addEventListener("click", () => changeDay(todayStr()));
+  $("event-form").addEventListener("submit", addEvent);
+  $("ev-cancel").addEventListener("click", resetForm);
+  $("cat-add").addEventListener("click", createCategory);
+  $("ev-category").addEventListener("change", renderSubSelect);
+  $("open-cats").addEventListener("click", () => {
+    appEl.hidden = true;
+    $("cats-screen").hidden = false;
+    window.scrollTo(0, 0);
+    renderCategories();
+  });
+  $("open-dash").addEventListener("click", () => {
+    appEl.hidden = true;
+    $("dash-screen").hidden = false;
+    window.scrollTo(0, 0);
+    renderDash();
+  });
+  $("dash-back").addEventListener("click", () => {
+    $("dash-screen").hidden = true;
+    appEl.hidden = false;
+  });
+  $("dash-range").addEventListener("change", renderDash);
+  $("cats-back").addEventListener("click", () => {
+    $("cats-screen").hidden = true;
+    appEl.hidden = false;
+  });
+  $("ev-priority").addEventListener("change", () => { $("ev-level").hidden = !$("ev-priority").checked; });
+
+  window.addEventListener("online", () => { if (!saveTimer) saveDay(); });
+
+  // Dashboard: tempo somado por categoria (nível 1) e por tarefa (nível 2)
+  const openCats = new Set();
+  const openSubs = new Set();
+  let dashData = { groups: [], grand: 0 };
+  function fmtHM(ms) {
+    const m = Math.round(ms / 60000);
+    const h = Math.floor(m / 60), min = m % 60;
+    return h ? h + "h " + String(min).padStart(2, "0") + "min" : min + " min";
+  }
+  async function renderDash() {
+    const days = Number($("dash-range").value);
+    const to = todayStr();
+    const from = shiftDay(to, -(days - 1));
+    $("dash-cats").textContent = "Carregando…";
+    let rows = [];
+    try {
+      const { data, error } = await sb.from("planner_days").select("day,data").gte("day", from).lte("day", to);
+      if (error) throw error;
+      rows = data || [];
+    } catch (e) {
+      $("dash-cats").textContent = "Sem conexão: não foi possível carregar o tempo.";
+      return;
+    }
+    const now = Date.now();
+    const perTask = {};
+    rows.forEach((r) => {
+      const t = (r.data && r.data.timers) || {};
+      Object.keys(t).forEach((id) => {
+        const v = t[id];
+        const ms = (v.total || 0) + (v.runningSince ? now - v.runningSince : 0);
+        perTask[id] = (perTask[id] || 0) + ms;
+      });
+    });
+    // Nível 1: categoria · nível 2: subcategoria · nível 3: tarefa
+    const groups = new Map();
+    Object.keys(perTask).forEach((id) => {
+      const ev = events.find((x) => x.id === id);
+      const cat = ev ? catById(ev.category_id) : null;
+      const key = cat ? cat.id : "none";
+      if (!groups.has(key)) {
+        groups.set(key, { key: key, name: cat ? cat.name : "Sem categoria", color: cat ? cat.color : "#7f8c8d", total: 0, subs: new Map() });
+      }
+      const g = groups.get(key);
+      const sub = ev && ev.subcategory_id ? subcats.find((s) => s.id === ev.subcategory_id) : null;
+      const sKey = sub ? sub.id : "none";
+      if (!g.subs.has(sKey)) {
+        g.subs.set(sKey, { key: g.key + "|" + sKey, name: sub ? sub.name : "Sem subcategoria", total: 0, tasks: [] });
+      }
+      const s = g.subs.get(sKey);
+      g.total += perTask[id];
+      s.total += perTask[id];
+      s.tasks.push({ title: ev ? ev.title : "Tarefa removida", ms: perTask[id] });
+    });
+    const list = [...groups.values()].sort((a, b) => b.total - a.total);
+    const meet = Object.keys(perTask).reduce((s, id) => {
+      const ev = events.find((x) => x.id === id);
+      return s + (ev && ev.kind === "reuniao" ? perTask[id] : 0);
+    }, 0);
+    dashData = { groups: list, grand: list.reduce((s, g) => s + g.total, 0), meet: meet };
+    paintDash();
+  }
+  function paintDash() {
+    const { groups, grand } = dashData;
+    $("dash-total").textContent = "Total no período: " + fmtHM(grand) + "  ·  Em reuniões: " + fmtHM(dashData.meet);
+    const box = $("dash-cats");
+    box.textContent = "";
+    if (!groups.length) {
+      box.textContent = "Nenhum tempo registrado neste período.";
+      return;
+    }
+    const max = Math.max(...groups.map((g) => g.total));
+    groups.forEach((g) => {
+      const wrap = document.createElement("div");
+      wrap.className = "cat-group";
+      const head = document.createElement("button");
+      head.type = "button";
+      head.className = "cat-head";
+      head.setAttribute("aria-expanded", String(openCats.has(g.key)));
+      const label = document.createElement("span");
+      label.className = "label";
+      label.textContent = g.name;
+      label.style.color = g.color;
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      const fill = document.createElement("span");
+      fill.style.width = (g.total / max * 100) + "%";
+      fill.style.background = g.color;
+      bar.append(fill);
+      const time = document.createElement("span");
+      time.className = "time";
+      time.textContent = fmtHM(g.total) + (openCats.has(g.key) ? " ▾" : " ▸");
+      head.append(label, bar, time);
+      head.addEventListener("click", () => {
+        if (openCats.has(g.key)) openCats.delete(g.key); else openCats.add(g.key);
+        paintDash();
+      });
+      wrap.append(head);
+      if (openCats.has(g.key)) {
+        const subsBox = document.createElement("div");
+        subsBox.className = "task-rows";
+        [...g.subs.values()].sort((a, b) => b.total - a.total).forEach((s) => {
+          const open = openSubs.has(s.key);
+          const sh = document.createElement("button");
+          sh.type = "button";
+          sh.className = "sub-head";
+          sh.setAttribute("aria-expanded", String(open));
+          const sn = document.createElement("span");
+          sn.textContent = s.name;
+          const st = document.createElement("span");
+          st.className = "time";
+          st.textContent = fmtHM(s.total) + (open ? " ▾" : " ▸");
+          sh.append(sn, st);
+          sh.addEventListener("click", () => {
+            if (open) openSubs.delete(s.key); else openSubs.add(s.key);
+            paintDash();
+          });
+          subsBox.append(sh);
+          if (open) {
+            s.tasks.slice().sort((a, b) => b.ms - a.ms).forEach((t) => {
+              const row = document.createElement("div");
+              row.className = "task-row sub-task";
+              const name = document.createElement("span");
+              name.className = "name";
+              name.textContent = t.title;
+              const tm = document.createElement("span");
+              tm.className = "time";
+              tm.textContent = fmtHM(t.ms);
+              row.append(name, tm);
+              subsBox.append(row);
+            });
+          }
+        });
+        wrap.append(subsBox);
+      }
+      box.append(wrap);
+    });
+  }
+
+  // Menu que mostra ou esconde Lembretes, Tarefas e Notas (começam escondidos)
+  let openPanels = [];
+  try { openPanels = JSON.parse(localStorage.getItem("planner-panels") || "[]"); } catch (e) {}
+  function applyPanels() {
+    document.querySelectorAll("[data-panel]").forEach((el) => {
+      el.hidden = !openPanels.includes(el.dataset.panel);
+    });
+    document.querySelectorAll("[data-toggle]").forEach((b) => {
+      b.setAttribute("aria-pressed", String(openPanels.includes(b.dataset.toggle)));
+    });
+    // Sem painel aberto, a agenda ocupa a tela toda
+    document.querySelector(".grid").classList.toggle("solo", openPanels.length === 0);
+  }
+  document.querySelectorAll("[data-toggle]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const k = b.dataset.toggle;
+      openPanels = openPanels.includes(k) ? openPanels.filter((x) => x !== k) : openPanels.concat(k);
+      try { localStorage.setItem("planner-panels", JSON.stringify(openPanels)); } catch (e) {}
+      applyPanels();
+    });
+  });
+  applyPanels();
+
+  // Login por código de 8 dígitos (sem redirecionamento)
+  const emailEl = $("email"), codeEl = $("code");
+  emailEl.value = localStorage.getItem("planner-email") || "";
+
+  $("send-code").addEventListener("click", async () => {
+    const email = emailEl.value.trim();
+    if (!email) { authMsg.textContent = "Digite seu e-mail."; return; }
+    authMsg.textContent = "Enviando código…";
+    const { error } = await sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } });
+    if (error) { authMsg.textContent = "Não foi possível enviar: " + error.message; return; }
+    localStorage.setItem("planner-email", email);
+    codeEl.hidden = false;
+    $("verify").hidden = false;
+    authMsg.textContent = "Confira seu e-mail e digite o código.";
+    codeEl.focus();
+  });
+
+  $("verify").addEventListener("click", async () => {
+    const email = emailEl.value.trim();
+    const token = codeEl.value.trim();
+    if (!token) { authMsg.textContent = "Digite o código."; return; }
+    const { error } = await sb.auth.verifyOtp({ email: email, token: token, type: "email" });
+    if (error) { authMsg.textContent = "Código inválido ou expirado."; }
+  });
+
+  $("logout").addEventListener("click", async () => { await sb.auth.signOut(); });
+
+  function showApp(on) {
+    authEl.hidden = on;
+    appEl.hidden = !on;
+  }
+
+  sb.auth.onAuthStateChange((event, session) => {
+    if (session) {
+      showApp(true);
+      loadCategories();
+      loadSubcats();
+      loadEvents();
+      loadDay(currentDay);
+    } else {
+      showApp(false);
+    }
+  });
+
+  sb.auth.getSession().then(({ data }) => {
+    if (!data.session) showApp(false);
+  });
+})();
+</script>
