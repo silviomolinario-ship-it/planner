@@ -385,6 +385,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
               <option value="daily">Todos os dias</option>
               <option value="weekdays">Dias úteis (seg a sex)</option>
               <option value="weekly">Semanal (mesmo dia da semana)</option>
+              <option value="monthly">Mensal (mesmo dia do mês)</option>
             </select>
             <select id="ev-category" aria-label="Categoria">
               <option value="">Sem categoria</option>
@@ -576,6 +577,12 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       case "daily": return true;
       case "weekdays": return dow >= 1 && dow <= 5;
       case "weekly": return dow === weekdayOf(ev.starts_on);
+      case "monthly": {
+        // Mesmo dia do mês da data inicial; em meses mais curtos cai no último dia
+        const [y, m, d] = day.split("-").map(Number);
+        const last = new Date(y, m, 0).getDate();
+        return d === Math.min(Number(ev.starts_on.slice(8, 10)), last);
+      }
       default: return day === ev.starts_on;
     }
   }
@@ -597,7 +604,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     normal: { label: "Normal" }
   };
   function repeatLabel(rule) {
-    return { none: "", daily: "todos os dias", weekdays: "dias úteis", weekly: "semanal" }[rule] || "";
+    return { none: "", daily: "todos os dias", weekdays: "dias úteis", weekly: "semanal", monthly: "mensal" }[rule] || "";
   }
   function timeRange(startHHMM, endHHMM) {
     return startHHMM.slice(0, 5) + (endHHMM ? " – " + endHHMM.slice(0, 5) : "");
