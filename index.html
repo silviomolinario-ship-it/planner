@@ -194,6 +194,12 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .hevent.done { opacity: 0.7; }
 
 .side { display: grid; gap: 14px; min-width: 0; }
+.prio-toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.prio-toggle input { width: 18px; height: 18px; margin: 0; }
+.matrix { color: var(--muted); font-size: 12px; margin: 0; line-height: 1.5; }
+.hevent.lvl-urgente { background: var(--soft-red); border-left-color: #c2410c; }
+.hevent.lvl-importante { background: var(--soft-yellow); }
+.hevent.lvl-normal { background: var(--soft-blue); }
 .card {
   background: var(--paper);
   border: 1px solid var(--line);
@@ -301,23 +307,11 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
           <h2>Lembretes</h2>
           <textarea data-field="lembretes" aria-label="Lembretes"></textarea>
         </section>
-        <section class="card prios">
-          <h2>Prioridades</h2>
-          <p class="note">Com início e fim, a prioridade vira um bloco na grade.</p>
-          <div class="prio-row"><input type="checkbox" data-check="p0" aria-label="Prioridade 1 concluída"><input type="text" data-field="p0" aria-label="Prioridade 1"><input type="time" data-field="p0s" aria-label="Início da prioridade 1"><input type="time" data-field="p0e" aria-label="Fim da prioridade 1"></div>
-          <div class="prio-row"><input type="checkbox" data-check="p1" aria-label="Prioridade 2 concluída"><input type="text" data-field="p1" aria-label="Prioridade 2"><input type="time" data-field="p1s" aria-label="Início da prioridade 2"><input type="time" data-field="p1e" aria-label="Fim da prioridade 2"></div>
-          <div class="prio-row"><input type="checkbox" data-check="p2" aria-label="Prioridade 3 concluída"><input type="text" data-field="p2" aria-label="Prioridade 3"><input type="time" data-field="p2s" aria-label="Início da prioridade 3"><input type="time" data-field="p2e" aria-label="Fim da prioridade 3"></div>
-          <div class="prio-row"><input type="checkbox" data-check="p3" aria-label="Prioridade 4 concluída"><input type="text" data-field="p3" aria-label="Prioridade 4"><input type="time" data-field="p3s" aria-label="Início da prioridade 4"><input type="time" data-field="p3e" aria-label="Fim da prioridade 4"></div>
-          <div class="prio-row"><input type="checkbox" data-check="p4" aria-label="Prioridade 5 concluída"><input type="text" data-field="p4" aria-label="Prioridade 5"><input type="time" data-field="p4s" aria-label="Início da prioridade 5"><input type="time" data-field="p4e" aria-label="Fim da prioridade 5"></div>
-          <div class="prio-row"><input type="checkbox" data-check="p5" aria-label="Prioridade 6 concluída"><input type="text" data-field="p5" aria-label="Prioridade 6"><input type="time" data-field="p5s" aria-label="Início da prioridade 6"><input type="time" data-field="p5e" aria-label="Fim da prioridade 6"></div>
-          <div class="prio-row"><input type="checkbox" data-check="p6" aria-label="Prioridade 7 concluída"><input type="text" data-field="p6" aria-label="Prioridade 7"><input type="time" data-field="p6s" aria-label="Início da prioridade 7"><input type="time" data-field="p6e" aria-label="Fim da prioridade 7"></div>
-        </section>
-
         <section class="card compromissos">
-          <h2>Compromissos</h2>
+          <h2>Tarefas</h2>
           <div id="events-list"></div>
           <form id="event-form" class="event-form">
-            <input id="ev-title" type="text" placeholder="Compromisso" aria-label="Título do compromisso" required>
+            <input id="ev-title" type="text" placeholder="Tarefa" aria-label="Título da tarefa" required>
             <div class="pair">
               <input id="ev-start" type="time" aria-label="Início" required>
               <input id="ev-end" type="time" aria-label="Fim">
@@ -328,8 +322,15 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
               <option value="weekdays">Dias úteis (seg a sex)</option>
               <option value="weekly">Semanal (mesmo dia da semana)</option>
             </select>
+            <label class="prio-toggle"><input id="ev-priority" type="checkbox"> Tarefa prioritária</label>
+            <select id="ev-level" aria-label="Nível de prioridade" hidden>
+              <option value="urgente">Urgente: importante e urgente, fazer agora</option>
+              <option value="importante">Importante: não urgente, agendar</option>
+              <option value="normal">Normal: demais tarefas</option>
+            </select>
+            <p class="matrix">Matriz de priorização (Eisenhower): Urgente = importante e urgente. Importante = importante, sem pressão de prazo. Normal = o resto, que pode ser delegado ou eliminado.</p>
             <p class="hint">Começa no dia selecionado acima. Marque o checkbox em cada dia em que concluir.</p>
-            <button class="primary" type="submit">Adicionar compromisso</button>
+            <button class="primary" type="submit">Adicionar tarefa</button>
           </form>
         </section>
 
@@ -474,6 +475,11 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     return hour * 60 < r.end && (hour + 1) * 60 > r.start;
   }
 
+  const LEVELS = {
+    urgente: { label: "Urgente" },
+    importante: { label: "Importante" },
+    normal: { label: "Normal" }
+  };
   function repeatLabel(rule) {
     return { none: "", daily: "todos os dias", weekdays: "dias úteis", weekly: "semanal" }[rule] || "";
   }
@@ -490,35 +496,14 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   // Bloco de compromisso dentro de uma linha de hora
   function agendaItem(ev) {
     const wrap = document.createElement("div");
-    wrap.className = "hevent" + (doneEvents[ev.id] ? " done" : "");
+    wrap.className = "hevent" + (doneEvents[ev.id] ? " done" : "") + (ev.is_priority ? " lvl-" + ev.priority_level : "");
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.checked = !!doneEvents[ev.id];
     cb.setAttribute("aria-label", "Concluído: " + ev.title);
     cb.addEventListener("change", () => toggleDone(ev, cb.checked));
     const label = document.createElement("span");
-    label.textContent = timeRange(ev.start_time, ev.end_time) + "  " + ev.title;
-    wrap.append(cb, label);
-    return wrap;
-  }
-
-  // Bloco de prioridade com horário dentro de uma linha de hora (o checkbox é o da lista de prioridades)
-  function priorityItem(i, text, startHHMM, endHHMM) {
-    const wrap = document.createElement("div");
-    const source = document.querySelector('[data-check="p' + i + '"]');
-    const done = source.checked;
-    wrap.className = "hevent prio" + (done ? " done" : "");
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.checked = done;
-    cb.setAttribute("aria-label", "Prioridade concluída: " + text);
-    cb.addEventListener("change", () => {
-      source.checked = cb.checked;
-      scheduleSave();
-      renderEvents();
-    });
-    const label = document.createElement("span");
-    label.textContent = timeRange(startHHMM, endHHMM) + "  " + text;
+    label.textContent = (ev.is_priority ? LEVELS[ev.priority_level].label + " · " : "") + timeRange(ev.start_time, ev.end_time) + "  " + ev.title;
     wrap.append(cb, label);
     return wrap;
   }
@@ -537,6 +522,11 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     const text = document.createElement("div");
     text.className = "event-text";
     text.append(timeRange(ev.start_time, ev.end_time) + "  " + ev.title);
+    if (ev.is_priority) {
+      const lvl = document.createElement("small");
+      lvl.textContent = "Prioridade: " + LEVELS[ev.priority_level].label;
+      text.append(lvl);
+    }
     const rep = repeatLabel(ev.repeat_rule);
     if (rep) {
       const small = document.createElement("small");
@@ -575,7 +565,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     if (!todays.length) {
       const p = document.createElement("p");
       p.className = "empty";
-      p.textContent = "Nenhum compromisso neste dia.";
+      p.textContent = "Nenhuma tarefa neste dia.";
       listEl.append(p);
     }
 
@@ -584,14 +574,6 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       listEl.append(listRow(ev));
     });
 
-    // Prioridades com início e fim
-    for (let i = 0; i < 7; i++) {
-      const text = document.querySelector('[data-field="p' + i + '"]').value.trim();
-      const s = document.querySelector('[data-field="p' + i + 's"]').value;
-      const e = document.querySelector('[data-field="p' + i + 'e"]').value;
-      if (!text || !s) continue;
-      items.push({ r: rangeOf(s, e), el: priorityItem(i, text, s, e) });
-    }
     layoutItems(items);
   }
 
@@ -612,6 +594,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     const start = $("ev-start").value;
     const end = $("ev-end").value;
     const repeat = $("ev-repeat").value;
+    const isPrio = $("ev-priority").checked;
+    const level = $("ev-level").value;
     if (!title || !start) return;
     try {
       const { data: userData } = await sb.auth.getUser();
@@ -622,13 +606,17 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         start_time: start,
         end_time: end || null,
         repeat_rule: repeat,
-        starts_on: currentDay
+        starts_on: currentDay,
+        is_priority: isPrio,
+        priority_level: isPrio ? level : null
       });
       if (error) throw error;
       $("ev-title").value = "";
       $("ev-start").value = "";
       $("ev-end").value = "";
       $("ev-repeat").value = "none";
+      $("ev-priority").checked = false;
+      $("ev-level").hidden = true;
       await loadEvents();
       setStatus("Compromisso adicionado");
     } catch (err) {
@@ -702,15 +690,12 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   document.querySelectorAll("[data-field], [data-check]").forEach((el) => {
     el.addEventListener(el.type === "checkbox" ? "change" : "input", scheduleSave);
   });
-  // Mudanças em prioridades atualizam os blocos na grade na hora
-  document.querySelectorAll('[data-field^="p"], [data-check^="p"]').forEach((el) => {
-    el.addEventListener(el.type === "checkbox" ? "change" : "input", renderEvents);
-  });
   dateEl.addEventListener("change", () => { if (dateEl.value) changeDay(dateEl.value); });
   $("prev").addEventListener("click", () => changeDay(shiftDay(currentDay, -1)));
   $("next").addEventListener("click", () => changeDay(shiftDay(currentDay, 1)));
   $("today").addEventListener("click", () => changeDay(todayStr()));
   $("event-form").addEventListener("submit", addEvent);
+  $("ev-priority").addEventListener("change", () => { $("ev-level").hidden = !$("ev-priority").checked; });
 
   window.addEventListener("online", () => { if (!saveTimer) saveDay(); });
 
