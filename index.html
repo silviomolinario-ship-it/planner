@@ -245,6 +245,15 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .event-row input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
 .event-text { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .event-text small { color: var(--muted); display: block; font-size: 12px; }
+.cats { display: grid; gap: 8px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.cat-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cat-row .name { font-weight: 800; min-width: 90px; }
+.cat-row .ghost { font-size: 12px; }
+.cat-new { display: grid; gap: 8px; }
+.palette { display: flex; flex-wrap: wrap; gap: 6px; }
+.swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; padding: 0; cursor: pointer; }
+.swatch[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 2px var(--paper); }
+#cat-add { justify-self: start; }
 .timer { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .clock { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); margin-right: 4px; }
 .timer small { color: var(--muted); font-size: 12px; }
@@ -317,6 +326,15 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         </section>
         <section class="card compromissos">
           <h2>Tarefas</h2>
+          <div id="cat-section" class="cats">
+            <p class="note">Categorias: escolha uma cor para cada uma, ou crie novas.</p>
+            <div id="cat-list"></div>
+            <div class="cat-new">
+              <input id="cat-name" type="text" placeholder="Nova categoria" aria-label="Nome da nova categoria">
+              <div id="cat-palette"></div>
+              <button id="cat-add" type="button">Criar categoria</button>
+            </div>
+          </div>
           <div id="events-list"></div>
           <form id="event-form" class="event-form">
             <input id="ev-title" type="text" placeholder="Tarefa" aria-label="Título da tarefa" required>
@@ -333,6 +351,9 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
               <option value="daily">Todos os dias</option>
               <option value="weekdays">Dias úteis (seg a sex)</option>
               <option value="weekly">Semanal (mesmo dia da semana)</option>
+            </select>
+            <select id="ev-category" aria-label="Categoria">
+              <option value="">Sem categoria</option>
             </select>
             <select id="ev-kind" aria-label="Tipo">
               <option value="tarefa">Tarefa</option>
@@ -422,7 +443,10 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   let suppressSave = false;
   let events = [];          // compromissos (série) do usuário
   let doneEvents = {};
-  let timers = {};          // cronômetro por tarefa neste dia: { total, runningSince, finished }      // compromissos concluídos no dia atual: { [eventId]: true }
+  let timers = {};
+  let categories = [];      // categorias do usuário: { id, name, color }
+  const PALETTE = ["#2f8f5b", "#5aa9e6", "#8a5cc2", "#e0a800", "#e67e22", "#c0392b", "#16a085", "#34495e", "#d63384", "#7f8c8d"];
+  let newCatColor = PALETTE[0];          // cronômetro por tarefa neste dia: { total, runningSince, finished }      // compromissos concluídos no dia atual: { [eventId]: true }
 
   function todayStr() {
     return new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD no fuso local
@@ -525,6 +549,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     cb.addEventListener("change", () => toggleDone(ev, cb.checked));
     const label = document.createElement("span");
     label.textContent = (ev.kind === "reuniao" ? "Reunião · " : "") + (ev.is_priority ? LEVELS[ev.priority_level].label + " · " : "") + timeRange(ev.start_time, ev.end_time) + "  " + ev.title;
+    const cat = catById(ev.category_id);
+    if (cat) wrap.style.borderLeftColor = cat.color;
     wrap.append(cb, label);
     return wrap;
   }
@@ -543,6 +569,13 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     const text = document.createElement("div");
     text.className = "event-text";
     text.append(timeRange(ev.start_time, ev.end_time) + "  " + ev.title);
+    const catRow = catById(ev.category_id);
+    if (catRow) {
+      const cs = document.createElement("small");
+      cs.textContent = "Categoria: " + catRow.name;
+      cs.style.color = catRow.color;
+      text.append(cs);
+    }
     if (ev.is_priority) {
       const lvl = document.createElement("small");
       lvl.textContent = "Prioridade: " + LEVELS[ev.priority_level].label;
@@ -584,6 +617,131 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     text.append(bar);
     row.append(cb, text, del);
     return row;
+  }
+
+  // Categorias: lista inicial na primeira vez; depois o usuário cria, recolore e exclui
+  const DEFAULT_CATS = [
+    { name: "Fiserv", color: "#34495e" },
+    { name: "Estudo", color: "#5aa9e6" },
+    { name: "Projetos", color: "#8a5cc2" },
+    { name: "Igreja", color: "#e67e22" }
+  ];
+  async function loadCategories() {
+    try {
+      const { data, error } = await sb.from("planner_categories").select("*").order("created_at", { ascending: true });
+      if (error) throw error;
+      if (!data.length) {
+        const { data: userData } = await sb.auth.getUser();
+        const { error: insErr } = await sb.from("planner_categories")
+          .insert(DEFAULT_CATS.map((c) => Object.assign({ user_id: userData.user.id }, c)));
+        if (insErr) throw insErr;
+        return loadCategories();
+      }
+      categories = data;
+    } catch (e) {
+      setStatus("Sem conexão: categorias podem estar desatualizadas");
+    }
+    renderCategories();
+  }
+  function catById(id) {
+    return categories.find((c) => c.id === id);
+  }
+  function paletteEl(selected, onPick) {
+    const wrap = document.createElement("div");
+    wrap.className = "palette";
+    PALETTE.forEach((color) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "swatch";
+      b.style.background = color;
+      b.setAttribute("aria-label", "Cor " + color);
+      b.setAttribute("aria-pressed", String(color === selected));
+      b.addEventListener("click", () => onPick(color));
+      wrap.append(b);
+    });
+    return wrap;
+  }
+  function renderCategories() {
+    const sel = $("ev-category");
+    const current = sel.value;
+    sel.textContent = "";
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "Sem categoria";
+    sel.append(none);
+    categories.forEach((c) => {
+      const o = document.createElement("option");
+      o.value = c.id;
+      o.textContent = c.name;
+      sel.append(o);
+    });
+    sel.value = current;
+
+    const list = $("cat-list");
+    list.textContent = "";
+    categories.forEach((c) => {
+      const row = document.createElement("div");
+      row.className = "cat-row";
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = c.name;
+      name.style.color = c.color;
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "ghost";
+      del.textContent = "Excluir";
+      del.addEventListener("click", () => {
+        if (!del.dataset.armed) {
+          del.dataset.armed = "1";
+          del.textContent = "Confirmar";
+          setTimeout(() => { delete del.dataset.armed; del.textContent = "Excluir"; }, 4000);
+          return;
+        }
+        deleteCategory(c);
+      });
+      row.append(name, paletteEl(c.color, (color) => updateCategory(c, { color: color })), del);
+      list.append(row);
+    });
+
+    const np = $("cat-palette");
+    np.textContent = "";
+    np.append(paletteEl(newCatColor, (color) => { newCatColor = color; renderCategories(); }));
+  }
+  async function createCategory() {
+    const name = $("cat-name").value.trim();
+    if (!name) { setStatus("Digite o nome da categoria"); return; }
+    try {
+      const { data: userData } = await sb.auth.getUser();
+      const { error } = await sb.from("planner_categories")
+        .insert({ user_id: userData.user.id, name: name, color: newCatColor });
+      if (error) throw error;
+      $("cat-name").value = "";
+      await loadCategories();
+      setStatus("Categoria criada");
+    } catch (e) {
+      setStatus("Não foi possível criar a categoria");
+    }
+  }
+  async function updateCategory(c, patch) {
+    try {
+      const { error } = await sb.from("planner_categories").update(patch).eq("id", c.id);
+      if (error) throw error;
+      await loadCategories();
+      renderEvents();
+    } catch (e) {
+      setStatus("Não foi possível alterar a categoria");
+    }
+  }
+  async function deleteCategory(c) {
+    try {
+      const { error } = await sb.from("planner_categories").delete().eq("id", c.id);
+      if (error) throw error;
+      await loadCategories();
+      await loadEvents();
+      setStatus("Categoria excluída");
+    } catch (e) {
+      setStatus("Não foi possível excluir a categoria");
+    }
   }
 
   // Cronômetro por tarefa: iniciar, pausar, retomar e finalizar
@@ -693,6 +851,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     $("ev-end").value = ev.end_time ? ev.end_time.slice(0, 5) : "";
     $("ev-repeat").value = ev.repeat_rule;
     $("ev-kind").value = ev.kind || "tarefa";
+    $("ev-category").value = ev.category_id || "";
     $("ev-priority").checked = !!ev.is_priority;
     $("ev-level").value = ev.priority_level || "normal";
     $("ev-level").hidden = !ev.is_priority;
@@ -735,6 +894,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         starts_on: startDate,
         ends_on: endDate,
         kind: kind,
+        category_id: $("ev-category").value || null,
         is_priority: isPrio,
         priority_level: isPrio ? level : null
       };
@@ -832,6 +992,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   $("today").addEventListener("click", () => changeDay(todayStr()));
   $("event-form").addEventListener("submit", addEvent);
   $("ev-cancel").addEventListener("click", resetForm);
+  $("cat-add").addEventListener("click", createCategory);
   $("ev-priority").addEventListener("change", () => { $("ev-level").hidden = !$("ev-priority").checked; });
 
   window.addEventListener("online", () => { if (!saveTimer) saveDay(); });
@@ -871,6 +1032,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   sb.auth.onAuthStateChange((event, session) => {
     if (session) {
       showApp(true);
+      loadCategories();
       loadEvents();
       loadDay(currentDay);
     } else {
