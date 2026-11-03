@@ -57,7 +57,7 @@ body {
   box-sizing: border-box;
 }
 [hidden] { display: none !important; }
-button, input, textarea { font: inherit; color: inherit; }
+button, input, textarea, select { font: inherit; color: inherit; }
 button {
   background: var(--paper);
   border: 1px solid var(--line);
@@ -65,7 +65,7 @@ button {
   padding: 8px 14px;
   cursor: pointer;
 }
-button:focus-visible, input:focus-visible, textarea:focus-visible {
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -74,6 +74,13 @@ button.primary {
   border-color: var(--accent);
   color: var(--paper);
   font-weight: 700;
+}
+button.ghost {
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--muted);
+  border-color: transparent;
+  background: transparent;
 }
 
 /* Login */
@@ -89,7 +96,7 @@ button.primary {
 }
 #auth h1 { margin: 0; font-size: 20px; font-weight: 800; }
 #auth p { margin: 0; color: var(--muted); font-size: 14px; text-wrap: balance; }
-input[type="email"], input[type="text"], input[type="date"], input[type="number"], textarea {
+input[type="email"], input[type="text"], input[type="date"], input[type="time"], input[type="number"], select, textarea {
   width: 100%;
   box-sizing: border-box;
   background: var(--paper);
@@ -176,6 +183,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="number"
 }
 .card.reminders { background: var(--soft-pink); }
 .card.prios { background: var(--soft-blue); }
+.card.compromissos { background: var(--paper); }
 .card.notas { background: var(--soft-red); }
 .card textarea { background: var(--paper); min-height: 110px; resize: vertical; }
 .prio-row {
@@ -187,6 +195,30 @@ input[type="email"], input[type="text"], input[type="date"], input[type="number"
 }
 .prio-row input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
 .prio-row input[type="text"] { background: transparent; border: none; border-bottom: 1px dashed var(--line); border-radius: 0; padding: 6px 2px; }
+
+/* Compromissos */
+.event-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.event-row:last-child { border-bottom: none; }
+.event-row input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
+.event-text { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.event-text small { color: var(--muted); display: block; font-size: 12px; }
+.empty { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+.event-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.event-form .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.event-form .hint { color: var(--muted); font-size: 12px; margin: 0; }
 </style>
 
 <main>
@@ -250,6 +282,27 @@ input[type="email"], input[type="text"], input[type="date"], input[type="number"
           <div class="prio-row"><input type="checkbox" data-check="p5" aria-label="Prioridade 6 concluída"><input type="text" data-field="p5" aria-label="Prioridade 6"></div>
           <div class="prio-row"><input type="checkbox" data-check="p6" aria-label="Prioridade 7 concluída"><input type="text" data-field="p6" aria-label="Prioridade 7"></div>
         </section>
+
+        <section class="card compromissos">
+          <h2>Compromissos</h2>
+          <div id="events-list"></div>
+          <form id="event-form" class="event-form">
+            <input id="ev-title" type="text" placeholder="Compromisso" aria-label="Título do compromisso" required>
+            <div class="pair">
+              <input id="ev-start" type="time" aria-label="Início" required>
+              <input id="ev-end" type="time" aria-label="Fim">
+            </div>
+            <select id="ev-repeat" aria-label="Repetir">
+              <option value="none">Não repete</option>
+              <option value="daily">Todos os dias</option>
+              <option value="weekdays">Dias úteis (seg a sex)</option>
+              <option value="weekly">Semanal (mesmo dia da semana)</option>
+            </select>
+            <p class="hint">Começa no dia selecionado acima. Marque o checkbox em cada dia em que concluir.</p>
+            <button class="primary" type="submit">Adicionar compromisso</button>
+          </form>
+        </section>
+
         <section class="card notas">
           <h2>Notas</h2>
           <textarea data-field="notas" aria-label="Notas"></textarea>
@@ -270,11 +323,14 @@ input[type="email"], input[type="text"], input[type="date"], input[type="number"
   const authEl = $("auth"), appEl = $("app");
   const statusEl = $("status"), authMsg = $("auth-msg");
   const dateEl = $("date");
+  const listEl = $("events-list");
 
   let currentDay = todayStr();
   let saveTimer = null;
   let loadToken = 0;
   let suppressSave = false;
+  let events = [];          // compromissos (série) do usuário
+  let doneEvents = {};      // concluídos no dia atual: { [eventId]: true }
 
   function todayStr() {
     return new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD no fuso local
@@ -284,14 +340,18 @@ input[type="email"], input[type="text"], input[type="date"], input[type="number"
     d.setDate(d.getDate() + n);
     return d.toLocaleDateString("en-CA");
   }
+  function weekdayOf(day) {
+    return new Date(day + "T12:00:00").getDay();
+  }
 
   function emptyData() {
-    return { fields: {}, checks: {} };
+    return { fields: {}, checks: {}, doneEvents: {} };
   }
   function collect() {
     const data = emptyData();
     document.querySelectorAll("[data-field]").forEach((el) => { data.fields[el.dataset.field] = el.value; });
     document.querySelectorAll("[data-check]").forEach((el) => { data.checks[el.dataset.check] = el.checked; });
+    data.doneEvents = Object.assign({}, doneEvents);
     return data;
   }
   function fill(data) {
@@ -299,7 +359,9 @@ input[type="email"], input[type="text"], input[type="date"], input[type="number"
     const d = data || emptyData();
     document.querySelectorAll("[data-field]").forEach((el) => { el.value = (d.fields && d.fields[el.dataset.field]) || ""; });
     document.querySelectorAll("[data-check]").forEach((el) => { el.checked = !!(d.checks && d.checks[el.dataset.check]); });
+    doneEvents = Object.assign({}, d.doneEvents || {});
     suppressSave = false;
+    renderEvents();
   }
 
   function cacheKey(day) { return "planner-cache:" + day; }
@@ -311,6 +373,131 @@ input[type="email"], input[type="text"], input[type="date"], input[type="number"
   }
 
   function setStatus(text) { statusEl.textContent = text; }
+
+  // Um compromisso aparece no dia se o dia cai na regra de repetição a partir da data inicial.
+  function occurs(ev, day) {
+    if (day < ev.starts_on) return false;
+    const dow = weekdayOf(day);
+    switch (ev.repeat_rule) {
+      case "daily": return true;
+      case "weekdays": return dow >= 1 && dow <= 5;
+      case "weekly": return dow === weekdayOf(ev.starts_on);
+      default: return day === ev.starts_on;
+    }
+  }
+
+  function repeatLabel(rule) {
+    return { none: "", daily: "todos os dias", weekdays: "dias úteis", weekly: "semanal" }[rule] || "";
+  }
+
+  function renderEvents() {
+    listEl.textContent = "";
+    const todays = events
+      .filter((ev) => occurs(ev, currentDay))
+      .sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+    if (!todays.length) {
+      const p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = "Nenhum compromisso neste dia.";
+      listEl.append(p);
+      return;
+    }
+
+    todays.forEach((ev) => {
+      const row = document.createElement("div");
+      row.className = "event-row";
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !!doneEvents[ev.id];
+      cb.setAttribute("aria-label", "Concluído: " + ev.title);
+      cb.addEventListener("change", () => {
+        if (cb.checked) doneEvents[ev.id] = true; else delete doneEvents[ev.id];
+        scheduleSave();
+      });
+
+      const text = document.createElement("div");
+      text.className = "event-text";
+      const range = ev.start_time.slice(0, 5) + (ev.end_time ? " – " + ev.end_time.slice(0, 5) : "");
+      text.append(range + "  " + ev.title);
+      const rep = repeatLabel(ev.repeat_rule);
+      if (rep) {
+        const small = document.createElement("small");
+        small.textContent = "Repete: " + rep;
+        text.append(small);
+      }
+
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "ghost";
+      del.textContent = "Excluir série";
+      del.addEventListener("click", () => {
+        if (!del.dataset.armed) {
+          del.dataset.armed = "1";
+          del.textContent = "Confirmar";
+          setTimeout(() => { delete del.dataset.armed; del.textContent = "Excluir série"; }, 4000);
+          return;
+        }
+        deleteEvent(ev);
+      });
+
+      row.append(cb, text, del);
+      listEl.append(row);
+    });
+  }
+
+  async function loadEvents() {
+    try {
+      const { data, error } = await sb.from("planner_events").select("*").order("start_time", { ascending: true });
+      if (error) throw error;
+      events = data || [];
+    } catch (e) {
+      setStatus("Sem conexão: compromissos podem estar desatualizados");
+    }
+    renderEvents();
+  }
+
+  async function addEvent(e) {
+    e.preventDefault();
+    const title = $("ev-title").value.trim();
+    const start = $("ev-start").value;
+    const end = $("ev-end").value;
+    const repeat = $("ev-repeat").value;
+    if (!title || !start) return;
+    try {
+      const { data: userData } = await sb.auth.getUser();
+      if (!userData || !userData.user) throw new Error("sem sessão");
+      const { error } = await sb.from("planner_events").insert({
+        user_id: userData.user.id,
+        title: title,
+        start_time: start,
+        end_time: end || null,
+        repeat_rule: repeat,
+        starts_on: currentDay
+      });
+      if (error) throw error;
+      $("ev-title").value = "";
+      $("ev-start").value = "";
+      $("ev-end").value = "";
+      $("ev-repeat").value = "none";
+      await loadEvents();
+      setStatus("Compromisso adicionado");
+    } catch (err) {
+      setStatus("Não foi possível adicionar o compromisso");
+    }
+  }
+
+  async function deleteEvent(ev) {
+    try {
+      const { error } = await sb.from("planner_events").delete().eq("id", ev.id);
+      if (error) throw error;
+      await loadEvents();
+      setStatus("Compromisso excluído");
+    } catch (err) {
+      setStatus("Não foi possível excluir o compromisso");
+    }
+  }
 
   async function loadDay(day) {
     const token = ++loadToken;
@@ -371,10 +558,11 @@ input[type="email"], input[type="text"], input[type="date"], input[type="number"
   $("prev").addEventListener("click", () => changeDay(shiftDay(currentDay, -1)));
   $("next").addEventListener("click", () => changeDay(shiftDay(currentDay, 1)));
   $("today").addEventListener("click", () => changeDay(todayStr()));
+  $("event-form").addEventListener("submit", addEvent);
 
   window.addEventListener("online", () => { if (!saveTimer) saveDay(); });
 
-  // Login por código de 6 dígitos (sem redirecionamento)
+  // Login por código de 8 dígitos (sem redirecionamento)
   const emailEl = $("email"), codeEl = $("code");
   emailEl.value = localStorage.getItem("planner-email") || "";
 
@@ -409,6 +597,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="number"
   sb.auth.onAuthStateChange((event, session) => {
     if (session) {
       showApp(true);
+      loadEvents();
       loadDay(currentDay);
     } else {
       showApp(false);
