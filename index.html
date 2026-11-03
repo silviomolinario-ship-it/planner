@@ -192,10 +192,10 @@ input[type="email"], input[type="text"], input[type="date"], input[type="number"
 <main>
   <section id="auth" hidden>
     <h1>Planner Diário</h1>
-    <p>Digite seu e-mail. Você recebe um código de 6 dígitos para entrar. A mesma conta funciona no iPad, Mac e iPhone.</p>
+    <p>Digite seu e-mail. Você recebe um código de 8 dígitos para entrar. A mesma conta funciona no iPad, Mac e iPhone.</p>
     <input id="email" type="email" placeholder="seu@email.com" autocomplete="email">
     <button id="send-code" class="primary" type="button">Enviar código</button>
-    <input id="code" type="text" inputmode="numeric" maxlength="6" placeholder="Código de 6 dígitos" autocomplete="one-time-code" hidden>
+    <input id="code" type="text" inputmode="numeric" maxlength="8" placeholder="Código de 8 dígitos" autocomplete="one-time-code" hidden>
     <button id="verify" class="primary" type="button" hidden>Entrar</button>
     <p id="auth-msg" role="status"></p>
   </section>
