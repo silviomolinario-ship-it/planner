@@ -386,8 +386,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
               <input id="ev-enddate" type="date" aria-label="Data de fim (opcional)">
             </div>
             <div class="pair">
-              <input id="ev-start" type="time" aria-label="Início" required>
-              <input id="ev-end" type="time" aria-label="Fim">
+              <input id="ev-start" type="time" step="3600" aria-label="Início" required>
+              <input id="ev-end" type="time" step="3600" aria-label="Fim">
             </div>
             <select id="ev-repeat" aria-label="Repetir">
               <option value="none">Não repete</option>
@@ -1054,7 +1054,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     editingId = null;
     $("event-form").reset();
     renderSubSelect();
-    $("ev-startdate").value = currentDay;
+    $("ev-startdate").value = todayStr();
     $("ev-level").hidden = true;
     $("ev-submit").textContent = "Adicionar tarefa";
     $("ev-cancel").hidden = true;
@@ -1063,13 +1063,13 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   async function addEvent(e) {
     e.preventDefault();
     const title = $("ev-title").value.trim();
-    const start = $("ev-start").value;
-    const end = $("ev-end").value;
+    const start = hourOnly($("ev-start").value);
+    const end = hourOnly($("ev-end").value);
     const repeat = $("ev-repeat").value;
     const isPrio = $("ev-priority").checked;
     const level = $("ev-level").value;
     const kind = $("ev-kind").value;
-    const startDate = $("ev-startdate").value || currentDay;
+    const startDate = $("ev-startdate").value || todayStr();
     const endDate = $("ev-enddate").value || null;
     if (endDate && endDate < startDate) { setStatus("A data de fim é anterior à de início"); return; }
     if (!title || !start) return;
@@ -1101,7 +1101,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       $("ev-priority").checked = false;
       $("ev-kind").value = "tarefa";
       $("ev-enddate").value = "";
-      $("ev-startdate").value = currentDay;
+      $("ev-startdate").value = todayStr();
       $("ev-level").hidden = true;
       await loadEvents();
       resetForm();
@@ -1125,7 +1125,6 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   async function loadDay(day) {
     const token = ++loadToken;
     dateEl.value = day;
-    $("ev-startdate").value = day;
     const cached = readCache(day);
     fill(cached);
     setStatus("Carregando…");
@@ -1208,6 +1207,15 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     appEl.hidden = false;
   });
   $("ev-priority").addEventListener("change", () => { $("ev-level").hidden = !$("ev-priority").checked; });
+
+  // Horários sempre em hora cheia (minutos 00)
+  function hourOnly(v) {
+    return v ? v.slice(0, 2) + ":00" : v;
+  }
+  ["ev-start", "ev-end"].forEach((id) => {
+    $(id).addEventListener("change", () => { $(id).value = hourOnly($(id).value); });
+  });
+  $("ev-startdate").value = todayStr();
 
   window.addEventListener("online", () => { if (!saveTimer) saveDay(); });
 
