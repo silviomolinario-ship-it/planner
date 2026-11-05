@@ -191,7 +191,15 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .hevent input[type="checkbox"] { width: 18px; height: 18px; margin: 0; }
 .hevent span { overflow-wrap: anywhere; }
 .hevent.done span { text-decoration: line-through; color: var(--muted); }
-.hevent.done { opacity: 0.7; }
+.hevent.done { opacity: 0.7; padding-right: 28px; }
+.hevent .done-badge {
+  position: absolute; top: 4px; right: 6px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #2f8f5b; color: #fff;
+  font-style: normal; font-size: 12px; font-weight: 700; line-height: 18px; text-align: center;
+}
+.event-row.done .event-text { text-decoration: line-through; color: var(--muted); }
+.event-row.done .event-text small { text-decoration: none; }
 
 .side { display: grid; gap: 14px; min-width: 0; }
 .panel-menu { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
@@ -630,13 +638,19 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     const cat = catById(ev.category_id);
     if (cat) wrap.style.borderLeftColor = cat.color;
     wrap.append(cb, label);
+    if (doneEvents[ev.id]) {
+      const badge = document.createElement("i");
+      badge.className = "done-badge";
+      badge.textContent = "✓";
+      wrap.append(badge);
+    }
     return wrap;
   }
 
-  // Linha da lista de gerenciamento (com excluir)
-  function listRow(ev) {
+  // Linha da lista de gerenciamento (com excluir). n é o número da tarefa no dia.
+  function listRow(ev, n) {
     const row = document.createElement("div");
-    row.className = "event-row";
+    row.className = "event-row" + (doneEvents[ev.id] ? " done" : "");
 
     const cb = document.createElement("input");
     cb.type = "checkbox";
@@ -646,7 +660,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 
     const text = document.createElement("div");
     text.className = "event-text";
-    text.append(timeRange(ev.start_time, ev.end_time) + "  " + ev.title);
+    text.append(n + ". " + timeRange(ev.start_time, ev.end_time) + "  " + ev.title);
     const catRow = catById(ev.category_id);
     if (catRow) {
       const cs = document.createElement("small");
@@ -994,9 +1008,9 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       listEl.append(p);
     }
 
-    todays.forEach((ev) => {
+    todays.forEach((ev, i) => {
       items.push({ r: rangeOf(ev.start_time, ev.end_time), el: agendaItem(ev) });
-      listEl.append(listRow(ev));
+      listEl.append(listRow(ev, i + 1));
     });
 
     layoutItems(items);
