@@ -336,6 +336,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     </header>
 
     <nav class="panel-menu" aria-label="Painéis">
+      <button id="show-agenda" type="button" aria-pressed="true">Agenda</button>
       <button type="button" data-toggle="lembretes" aria-pressed="false">Lembretes</button>
       <button type="button" data-toggle="tarefas" aria-pressed="false">Tarefas</button>
       <button type="button" data-toggle="notas" aria-pressed="false">Notas</button>
@@ -1362,7 +1363,14 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     const panelsOpen = openPanels.length > 0;
     document.querySelector(".hours").style.display = panelsOpen ? "none" : "";
     document.querySelector(".grid").classList.add("solo");
+    $("show-agenda").setAttribute("aria-pressed", String(!panelsOpen));
   }
+  // Botão Agenda: fecha os painéis e volta para a agenda
+  $("show-agenda").addEventListener("click", () => {
+    openPanels = [];
+    try { localStorage.setItem("planner-panels", "[]"); } catch (e) {}
+    applyPanels();
+  });
   document.querySelectorAll("[data-toggle]").forEach((b) => {
     b.addEventListener("click", () => {
       const k = b.dataset.toggle;
