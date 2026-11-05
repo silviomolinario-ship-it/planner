@@ -200,6 +200,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 }
 .event-row.done .event-text { text-decoration: line-through; color: var(--muted); }
 .event-row.done .event-text small { text-decoration: none; }
+.task-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.task-filter button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--paper); font-weight: 700; }
 
 .side { display: grid; gap: 14px; min-width: 0; }
 .panel-menu { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
@@ -378,6 +380,11 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         </section>
         <section class="card compromissos" data-panel="tarefas" hidden>
           <h2>Tarefas</h2>
+          <div class="task-filter" role="group" aria-label="Filtrar tarefas">
+            <button type="button" data-filter="todas" aria-pressed="true">Todas</button>
+            <button type="button" data-filter="ativas" aria-pressed="false">Ativas</button>
+            <button type="button" data-filter="concluidas" aria-pressed="false">Concluídas</button>
+          </div>
           <div id="events-list"></div>
           <form id="event-form" class="event-form">
             <input id="ev-title" type="text" placeholder="Tarefa" aria-label="Título da tarefa" required>
@@ -523,6 +530,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   let suppressSave = false;
   let events = [];          // compromissos (série) do usuário
   let doneEvents = {};
+  let taskFilter = "todas";                // filtro da lista: todas | ativas | concluidas
   let timers = {};
   let categories = [];      // categorias do usuário: { id, name, color }
   const PALETTE = ["#2f8f5b", "#5aa9e6", "#8a5cc2", "#e0a800", "#e67e22", "#c0392b", "#16a085", "#34495e", "#d63384", "#7f8c8d"];
@@ -1009,10 +1017,21 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       listEl.append(p);
     }
 
-    todays.forEach((ev, i) => {
+    todays.forEach((ev) => {
       items.push({ r: rangeOf(ev.start_time, ev.end_time), el: agendaItem(ev) });
-      listEl.append(listRow(ev, i + 1));
     });
+
+    // A lista de tarefas respeita o filtro; a agenda sempre mostra tudo
+    const visible = todays.filter((ev) =>
+      taskFilter === "ativas" ? !doneEvents[ev.id] :
+      taskFilter === "concluidas" ? !!doneEvents[ev.id] : true);
+    if (todays.length && !visible.length) {
+      const p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = taskFilter === "ativas" ? "Nenhuma tarefa ativa neste dia." : "Nenhuma tarefa concluída neste dia.";
+      listEl.append(p);
+    }
+    visible.forEach((ev, i) => listEl.append(listRow(ev, i + 1)));
 
     layoutItems(items);
   }
@@ -1218,6 +1237,15 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   });
   $("ev-startdate").value = todayStr();
   $("ev-enddate").value = todayStr();
+
+  // Filtro da lista de tarefas
+  document.querySelectorAll("[data-filter]").forEach((b) => {
+    b.addEventListener("click", () => {
+      taskFilter = b.dataset.filter;
+      document.querySelectorAll("[data-filter]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      renderEvents();
+    });
+  });
 
   window.addEventListener("online", () => { if (!saveTimer) saveDay(); });
 
