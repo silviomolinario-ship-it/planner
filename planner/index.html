@@ -1358,8 +1358,10 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     document.querySelectorAll("[data-toggle]").forEach((b) => {
       b.setAttribute("aria-pressed", String(openPanels.includes(b.dataset.toggle)));
     });
-    // Sem painel aberto, a agenda ocupa a tela toda
-    document.querySelector(".grid").classList.toggle("solo", openPanels.length === 0);
+    // Com painel aberto, a agenda some e o painel ocupa a tela; fechado o último, a agenda volta
+    const panelsOpen = openPanels.length > 0;
+    document.querySelector(".hours").style.display = panelsOpen ? "none" : "";
+    document.querySelector(".grid").classList.add("solo");
   }
   document.querySelectorAll("[data-toggle]").forEach((b) => {
     b.addEventListener("click", () => {
