@@ -322,6 +322,11 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .hist-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .hist-task { font-size: 13px; padding-left: 18px; color: var(--ink); }
 .hist-task.done { color: var(--muted); }
+.hist-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.hist-table { border-collapse: collapse; font-size: 12px; width: 100%; min-width: 1100px; }
+.hist-table th, .hist-table td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; white-space: nowrap; vertical-align: top; }
+.hist-table th { position: sticky; top: 0; background: var(--paper); font-weight: 700; }
+.hist-table td.hist-id { font-family: ui-monospace, Menlo, monospace; font-size: 11px; white-space: normal; word-break: break-all; max-width: 200px; }
 </style>
 
 <main>
@@ -1704,63 +1709,72 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   });
 
   // ---------- Histórico no dashboard: atividades trabalhadas por data e categoria ----------
+  const REPEAT_LABEL = { none: "Não repete", daily: "Todos os dias", weekdays: "Dias úteis", weekly: "Semanal", monthly: "Mensal" };
   async function renderHistory() {
     const box = $("dash-history");
     box.textContent = "Carregando…";
     const { data, error } = await sb.from("planner_days").select("day,data").order("day", { ascending: false });
     if (error) { box.textContent = "Não foi possível carregar o histórico."; return; }
     const now = Date.now(), hoje = todayStr();
-    const days = [];
+    const rows = [];
     (data || []).forEach((r) => {
       const d = r.data || {};
       const timers = d.timers || {}, done = d.doneEvents || {};
-      const tasks = [];
       new Set([...Object.keys(timers), ...Object.keys(done)]).forEach((id) => {
         const t = timers[id] || {};
         const ms = (t.total || 0) + (t.runningSince && r.day === hoje ? now - t.runningSince : 0);
         if (ms <= 0 && !done[id]) return;
-        const ev = events.find((x) => String(x.id) === String(id));
-        tasks.push({ title: ev ? ev.title : "Tarefa removida", cat: ev ? catById(ev.category_id) : null, ms: ms, done: !!done[id] });
+        rows.push({ day: r.day, id: id, ev: events.find((x) => String(x.id) === String(id)), ms: ms, done: !!done[id] });
       });
-      if (tasks.length) days.push({ day: r.day, tasks: tasks });
     });
     box.textContent = "";
-    if (!days.length) { box.textContent = "Nenhuma atividade registrada ainda."; return; }
-    days.forEach((dy, idx) => {
-      const det = document.createElement("details");
-      det.className = "hist-day";
-      if (idx === 0) det.open = true;
-      const sum = document.createElement("summary");
-      const total = dy.tasks.reduce((s, t) => s + t.ms, 0);
-      sum.textContent = bkFmtDate(dy.day) + " · " + fmtHM(total);
-      det.append(sum);
-      const groups = new Map();
-      dy.tasks.forEach((t) => {
-        const key = t.cat ? t.cat.id : "none";
-        if (!groups.has(key)) groups.set(key, { name: t.cat ? t.cat.name : "Sem categoria", color: t.cat ? t.cat.color : "#7f8c8d", tasks: [] });
-        groups.get(key).tasks.push(t);
+    if (!rows.length) { box.textContent = "Nenhuma atividade registrada ainda."; return; }
+    const cols = ["Data do registro", "ID da tarefa", "Título", "Início", "Fim", "Data de início", "Data de fim",
+      "Repetição", "Categoria", "Subcategoria", "Tipo", "Prioritária", "Nível", "Tempo registrado", "Concluída"];
+    const wrap = document.createElement("div");
+    wrap.className = "hist-wrap";
+    const table = document.createElement("table");
+    table.className = "hist-table";
+    const thead = document.createElement("thead");
+    const hr = document.createElement("tr");
+    cols.forEach((c) => { const th = document.createElement("th"); th.textContent = c; hr.append(th); });
+    thead.append(hr);
+    table.append(thead);
+    const tbody = document.createElement("tbody");
+    rows.forEach((row) => {
+      const ev = row.ev;
+      const cat = ev ? catById(ev.category_id) : null;
+      const sub = ev && ev.subcategory_id ? subcats.find((x) => String(x.id) === String(ev.subcategory_id)) : null;
+      const vals = [
+        bkFmtDate(row.day),
+        row.id,
+        ev ? ev.title : "Tarefa removida",
+        ev ? ev.start_time : "—",
+        ev && ev.end_time ? ev.end_time : "—",
+        ev && ev.starts_on ? bkFmtDate(ev.starts_on) : "—",
+        ev && ev.ends_on ? bkFmtDate(ev.ends_on) : "—",
+        ev ? (REPEAT_LABEL[ev.repeat_rule] || ev.repeat_rule || "—") : "—",
+        cat ? cat.name : "—",
+        sub ? sub.name : "—",
+        ev ? (ev.kind === "reuniao" ? "Reunião" : "Tarefa") : "—",
+        ev ? (ev.is_priority ? "Sim" : "Não") : "—",
+        ev && ev.is_priority && ev.priority_level ? LEVELS[ev.priority_level].label : "—",
+        fmtHM(row.ms),
+        row.done ? "Sim" : "Não"
+      ];
+      const tr = document.createElement("tr");
+      vals.forEach((v, i) => {
+        const td = document.createElement("td");
+        td.textContent = v;
+        if (i === 1) td.className = "hist-id";
+        tr.append(td);
       });
-      groups.forEach((g) => {
-        const gh = document.createElement("div");
-        gh.className = "hist-cat";
-        const dot = document.createElement("i");
-        dot.className = "hist-dot";
-        dot.style.background = g.color;
-        const name = document.createElement("strong");
-        name.textContent = g.name + " · " + fmtHM(g.tasks.reduce((s, t) => s + t.ms, 0));
-        gh.append(dot, name);
-        det.append(gh);
-        g.tasks.forEach((t) => {
-          const line = document.createElement("div");
-          line.className = "hist-task" + (t.done ? " done" : "");
-          line.textContent = t.title + " — " + fmtHM(t.ms) + (t.done ? " ✓" : "");
-          det.append(line);
-        });
-      });
-      box.append(det);
+      tbody.append(tr);
     });
+    table.append(tbody);
+    wrap.append(table);
+    box.append(wrap);
   }
-
   let openPanels = [];
   try { openPanels = JSON.parse(localStorage.getItem("planner-panels") || "[]"); } catch (e) {}
   function applyPanels() {
