@@ -330,6 +330,17 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .bk-status { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px; margin-right: 4px; vertical-align: middle; }
 .bk-status.em-backlog { background: var(--soft-yellow); color: #6b5a00; }
 .bk-status.agendado { background: color-mix(in srgb, #2f8f5b 22%, var(--paper)); color: #1d5e3a; }
+.bk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.bk-table th, .bk-table td { border-bottom: 1px solid var(--line); padding: 6px 6px; text-align: left; vertical-align: top; }
+.bk-table th { font-size: 12px; color: var(--muted); font-weight: 700; }
+.bk-table td.bk-title-cell { white-space: normal; overflow-wrap: anywhere; }
+.bk-line { cursor: pointer; }
+.bk-line.readonly { cursor: default; }
+.bk-line.selected { background: var(--soft-blue); }
+.bk-extra td { background: var(--bg); padding: 10px; }
+.bk-extra .bk-transform { margin-top: 0; }
+.bk-table .bk-status { margin-right: 0; }
+.hist-table td.hist-id { text-align: center; }
 </style>
 
 <main>
@@ -1538,67 +1549,94 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       box.append(p);
       return;
     }
+    const table = document.createElement("table");
+    table.className = "bk-table";
+    const thead = document.createElement("thead");
+    const hr = document.createElement("tr");
+    ["Status", "Nº", "Data", "Horário", "Título", "Categoria", "Tipo", "Prioridade"].forEach((c) => {
+      const th = document.createElement("th");
+      th.textContent = c;
+      hr.append(th);
+    });
+    thead.append(hr);
+    table.append(thead);
+    const tbody = document.createElement("tbody");
+    table.append(tbody);
+    box.append(table);
+
+    const cell = (tr, text, cls) => {
+      const td = document.createElement("td");
+      if (cls) td.className = cls;
+      td.textContent = text;
+      tr.append(td);
+      return td;
+    };
+    const statusCell = (tr, label, cls) => {
+      const td = document.createElement("td");
+      const b = document.createElement("span");
+      b.className = "bk-status " + cls;
+      b.textContent = label;
+      td.append(b);
+      tr.append(td);
+    };
+    const prioLabel = (x) => x.is_priority && x.priority_level ? LEVELS[x.priority_level].label : "—";
+    const kindLabel = (x) => x.kind === "reuniao" ? "Reunião" : "Tarefa";
+
     let n = 0;
     bkItems.forEach((it) => {
       n++;
-      const row = document.createElement("div");
-      row.className = "event-row bk-row" + (bkSelected === it.id ? " selected" : "");
-      const text = document.createElement("div");
-      text.className = "event-text bk-text";
-      text.tabIndex = 0;
-      const when = it.backlog_date
-        ? bkFmtDate(it.backlog_date) + (it.start_time ? " · " + timeRange(it.start_time, it.end_time) : "")
-        : "sem data";
-      const status = document.createElement("span");
-      status.className = "bk-status em-backlog";
-      status.textContent = "Em backlog";
-      text.append(status, " " + n + ". " + when + "  " + it.title);
-      const sm = document.createElement("small");
-      sm.textContent = [bkCatLabel(it),
-        it.kind === "reuniao" ? "Reunião" : "",
-        it.is_priority && it.priority_level ? "Prioridade: " + LEVELS[it.priority_level].label : ""
-      ].filter(Boolean).join(" · ");
-      text.append(sm);
+      const tr = document.createElement("tr");
+      tr.className = "bk-line" + (bkSelected === it.id ? " selected" : "");
+      tr.tabIndex = 0;
+      statusCell(tr, "Em backlog", "em-backlog");
+      cell(tr, String(n));
+      cell(tr, it.backlog_date ? bkFmtDate(it.backlog_date) : "sem data");
+      cell(tr, it.start_time ? timeRange(it.start_time, it.end_time) : "—");
+      cell(tr, it.title, "bk-title-cell");
+      cell(tr, bkCatLabel(it) || "—");
+      cell(tr, kindLabel(it));
+      cell(tr, prioLabel(it));
       const pick = () => {
         bkSelected = bkSelected === it.id ? null : it.id;
         if (bkSelected !== it.id) bkTransform = null;
         renderBacklog();
       };
-      text.addEventListener("click", pick);
-      text.addEventListener("keydown", (e) => { if (e.key === "Enter") pick(); });
-      row.append(text);
-      if (bkSelected === it.id) {
-        const acts = document.createElement("div");
-        acts.className = "bk-actions";
-        acts.append(
-          bkBtn("Transformar em tarefa ativa", () => { bkTransform = it.id; renderBacklog(); }, "primary"),
-          bkBtn("Editar", () => bkStartEdit(it)),
-          bkArmed("Excluir", () => bkDelete(it))
-        );
-        row.append(acts);
+      tr.addEventListener("click", pick);
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter") pick(); });
+      tbody.append(tr);
+      if (bkSelected === it.id || bkTransform === it.id) {
+        const ex = document.createElement("tr");
+        ex.className = "bk-extra";
+        const td = document.createElement("td");
+        td.colSpan = 8;
+        if (bkSelected === it.id) {
+          const acts = document.createElement("div");
+          acts.className = "bk-actions";
+          acts.append(
+            bkBtn("Transformar em tarefa ativa", () => { bkTransform = it.id; renderBacklog(); }, "primary"),
+            bkBtn("Editar", () => bkStartEdit(it)),
+            bkArmed("Excluir", () => bkDelete(it))
+          );
+          td.append(acts);
+        }
+        if (bkTransform === it.id) td.append(bkTransformForm(it));
+        ex.append(td);
+        tbody.append(ex);
       }
-      if (bkTransform === it.id) row.append(bkTransformForm(it));
-      box.append(row);
     });
     bkAgendado.forEach((ev) => {
       n++;
-      const row = document.createElement("div");
-      row.className = "event-row bk-row";
-      const text = document.createElement("div");
-      text.className = "event-text";
-      const status = document.createElement("span");
-      status.className = "bk-status agendado";
-      status.textContent = "Agendado";
-      const span = ev.starts_on ? bkFmtDate(ev.starts_on) + " · " + timeRange(ev.start_time, ev.end_time) : timeRange(ev.start_time, ev.end_time);
-      text.append(status, " " + n + ". " + span + "  " + ev.title);
-      const sm = document.createElement("small");
-      sm.textContent = [bkCatLabel(ev),
-        ev.kind === "reuniao" ? "Reunião" : "",
-        ev.is_priority && ev.priority_level ? "Prioridade: " + LEVELS[ev.priority_level].label : ""
-      ].filter(Boolean).join(" · ");
-      text.append(sm);
-      row.append(text);
-      box.append(row);
+      const tr = document.createElement("tr");
+      tr.className = "bk-line readonly";
+      statusCell(tr, "Agendado", "agendado");
+      cell(tr, String(n));
+      cell(tr, ev.starts_on ? bkFmtDate(ev.starts_on) : "—");
+      cell(tr, timeRange(ev.start_time, ev.end_time));
+      cell(tr, ev.title, "bk-title-cell");
+      cell(tr, bkCatLabel(ev) || "—");
+      cell(tr, kindLabel(ev));
+      cell(tr, prioLabel(ev));
+      tbody.append(tr);
     });
   }
   // Ativação: data e hora de execução são obrigatórias aqui
@@ -1776,7 +1814,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     });
     box.textContent = "";
     if (!rows.length) { box.textContent = "Nenhuma atividade registrada ainda."; return; }
-    const cols = ["Data do registro", "ID da tarefa", "Título", "Início", "Fim", "Data de início", "Data de fim",
+    const cols = ["Data do registro", "ID", "Título", "Início", "Fim", "Data de início", "Data de fim",
       "Repetição", "Categoria", "Subcategoria", "Tipo", "Prioritária", "Nível", "Tempo registrado", "Concluída"];
     const wrap = document.createElement("div");
     wrap.className = "hist-wrap";
@@ -1788,13 +1826,13 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     thead.append(hr);
     table.append(thead);
     const tbody = document.createElement("tbody");
-    rows.forEach((row) => {
+    rows.forEach((row, idx) => {
       const ev = row.ev;
       const cat = ev ? catById(ev.category_id) : null;
       const sub = ev && ev.subcategory_id ? subcats.find((x) => String(x.id) === String(ev.subcategory_id)) : null;
       const vals = [
         bkFmtDate(row.day),
-        row.id,
+        String(idx + 1),
         ev ? ev.title : "Tarefa removida",
         ev ? ev.start_time : "—",
         ev && ev.end_time ? ev.end_time : "—",
