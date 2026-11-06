@@ -343,6 +343,13 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .bk-table .bk-status { margin-right: 0; }
 .hist-table td.hist-id { text-align: center; }
 .hist-card { min-width: 0; overflow: hidden; }
+.modal { position: fixed; inset: 0; background: rgba(10, 12, 18, 0.55); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+.modal[hidden] { display: none; }
+.modal-box { background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; padding: 16px 18px; box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
+.modal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.modal-head h2 { margin: 0; font-size: 18px; }
+.modal-close { font-size: 22px; line-height: 1; padding: 2px 10px; }
+.modal-box .event-form { margin-top: 8px; padding-top: 0; border-top: none; }
 </style>
 
 <main>
@@ -423,44 +430,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
             <button type="button" data-filter="concluidas" aria-pressed="false">Concluídas</button>
           </div>
           <div id="events-list"></div>
-          <form id="event-form" class="event-form">
-            <input id="ev-title" type="text" placeholder="Tarefa" aria-label="Título da tarefa" required>
-            <div class="pair">
-              <input id="ev-startdate" type="date" aria-label="Data de início">
-              <input id="ev-enddate" type="date" aria-label="Data de fim">
-            </div>
-            <div class="pair">
-              <input id="ev-start" type="time" aria-label="Início" required>
-              <input id="ev-end" type="time" aria-label="Fim">
-            </div>
-            <select id="ev-repeat" aria-label="Repetir">
-              <option value="none">Não repete</option>
-              <option value="daily">Todos os dias</option>
-              <option value="weekdays">Dias úteis (seg a sex)</option>
-              <option value="weekly">Semanal (mesmo dia da semana)</option>
-              <option value="monthly">Mensal (mesmo dia do mês)</option>
-            </select>
-            <select id="ev-category" aria-label="Categoria">
-              <option value="">Sem categoria</option>
-            </select>
-            <select id="ev-subcategory" aria-label="Subcategoria">
-              <option value="">Sem subcategoria</option>
-            </select>
-            <select id="ev-kind" aria-label="Tipo">
-              <option value="tarefa">Tarefa</option>
-              <option value="reuniao">Reunião (verde na agenda)</option>
-            </select>
-            <label class="prio-toggle"><input id="ev-priority" type="checkbox"> Tarefa prioritária</label>
-            <select id="ev-level" aria-label="Nível de prioridade" hidden>
-              <option value="urgente">Urgente: importante e urgente, fazer agora</option>
-              <option value="importante">Importante: não urgente, agendar</option>
-              <option value="normal">Normal: demais tarefas</option>
-            </select>
-            <p class="matrix">Matriz de priorização (Eisenhower): Urgente = importante e urgente. Importante = importante, sem pressão de prazo. Normal = o resto, que pode ser delegado ou eliminado.</p>
-            <p class="hint">Começa no dia selecionado acima. Marque o checkbox em cada dia em que concluir.</p>
-            <button id="ev-submit" class="primary" type="submit">Adicionar tarefa</button>
-            <button id="ev-cancel" type="button" hidden>Cancelar edição</button>
-          </form>
+          <button id="open-task-modal" class="primary" type="button">Nova tarefa</button>
+
         </section>
 
         <section class="card backlog" data-panel="backlog" hidden>
@@ -468,32 +439,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
           <p class="hint">Status: Em backlog = ainda não agendada. Agendado = já está na agenda. Data e hora são opcionais no backlog. Para transformar em tarefa ativa, informe a data e a hora de execução.</p>
           <button id="bk-link-open" class="primary" type="button">Vincular tarefas em aberto</button>
           <div id="bk-list"></div>
-          <form id="bk-form" class="event-form">
-            <input id="bk-title" type="text" placeholder="Atividade" aria-label="Título da atividade" required>
-            <input id="bk-date" type="date" aria-label="Data (opcional)">
-            <div class="pair">
-              <input id="bk-start" type="time" aria-label="Hora de início (opcional)">
-              <input id="bk-end" type="time" aria-label="Hora de fim (opcional)">
-            </div>
-            <select id="bk-category" aria-label="Categoria">
-              <option value="">Sem categoria</option>
-            </select>
-            <select id="bk-subcategory" aria-label="Subcategoria">
-              <option value="">Sem subcategoria</option>
-            </select>
-            <select id="bk-kind" aria-label="Tipo">
-              <option value="tarefa">Tarefa</option>
-              <option value="reuniao">Reunião (verde na agenda)</option>
-            </select>
-            <label class="prio-toggle"><input id="bk-priority" type="checkbox"> Tarefa prioritária</label>
-            <select id="bk-level" aria-label="Nível de prioridade" hidden>
-              <option value="urgente">Urgente: importante e urgente, fazer agora</option>
-              <option value="importante">Importante: não urgente, agendar</option>
-              <option value="normal">Normal: demais tarefas</option>
-            </select>
-            <button id="bk-submit" class="primary" type="submit">Adicionar ao backlog</button>
-            <button id="bk-cancel" type="button" hidden>Cancelar edição</button>
-          </form>
+          <button id="open-bk-modal" class="primary" type="button">Nova atividade</button>
+
         </section>
         <section class="card notas" data-panel="notas" hidden>
           <h2>Notas</h2>
@@ -539,6 +486,80 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       <div id="dash-history"></div>
     </div>
   </section>
+<div id="modal-tarefa" class="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-tarefa-title">
+    <div class="modal-head"><h2 id="modal-tarefa-title">Tarefa</h2><button type="button" class="modal-close" data-close="modal-tarefa" aria-label="Fechar">×</button></div>
+          <form id="event-form" class="event-form">
+            <input id="ev-title" type="text" placeholder="Tarefa" aria-label="Título da tarefa" required>
+            <div class="pair">
+              <input id="ev-startdate" type="date" aria-label="Data de início">
+              <input id="ev-enddate" type="date" aria-label="Data de fim">
+            </div>
+            <div class="pair">
+              <input id="ev-start" type="time" aria-label="Início" required>
+              <input id="ev-end" type="time" aria-label="Fim">
+            </div>
+            <select id="ev-repeat" aria-label="Repetir">
+              <option value="none">Não repete</option>
+              <option value="daily">Todos os dias</option>
+              <option value="weekdays">Dias úteis (seg a sex)</option>
+              <option value="weekly">Semanal (mesmo dia da semana)</option>
+              <option value="monthly">Mensal (mesmo dia do mês)</option>
+            </select>
+            <select id="ev-category" aria-label="Categoria">
+              <option value="">Sem categoria</option>
+            </select>
+            <select id="ev-subcategory" aria-label="Subcategoria">
+              <option value="">Sem subcategoria</option>
+            </select>
+            <select id="ev-kind" aria-label="Tipo">
+              <option value="tarefa">Tarefa</option>
+              <option value="reuniao">Reunião (verde na agenda)</option>
+            </select>
+            <label class="prio-toggle"><input id="ev-priority" type="checkbox"> Tarefa prioritária</label>
+            <select id="ev-level" aria-label="Nível de prioridade" hidden>
+              <option value="urgente">Urgente: importante e urgente, fazer agora</option>
+              <option value="importante">Importante: não urgente, agendar</option>
+              <option value="normal">Normal: demais tarefas</option>
+            </select>
+            <p class="matrix">Matriz de priorização (Eisenhower): Urgente = importante e urgente. Importante = importante, sem pressão de prazo. Normal = o resto, que pode ser delegado ou eliminado.</p>
+            <p class="hint">Começa no dia selecionado acima. Marque o checkbox em cada dia em que concluir.</p>
+            <button id="ev-submit" class="primary" type="submit">Adicionar tarefa</button>
+            <button id="ev-cancel" type="button" hidden>Cancelar edição</button>
+          </form>
+  </div>
+</div>
+<div id="modal-bk" class="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-bk-title">
+    <div class="modal-head"><h2 id="modal-bk-title">Atividade do backlog</h2><button type="button" class="modal-close" data-close="modal-bk" aria-label="Fechar">×</button></div>
+          <form id="bk-form" class="event-form">
+            <input id="bk-title" type="text" placeholder="Atividade" aria-label="Título da atividade" required>
+            <input id="bk-date" type="date" aria-label="Data (opcional)">
+            <div class="pair">
+              <input id="bk-start" type="time" aria-label="Hora de início (opcional)">
+              <input id="bk-end" type="time" aria-label="Hora de fim (opcional)">
+            </div>
+            <select id="bk-category" aria-label="Categoria">
+              <option value="">Sem categoria</option>
+            </select>
+            <select id="bk-subcategory" aria-label="Subcategoria">
+              <option value="">Sem subcategoria</option>
+            </select>
+            <select id="bk-kind" aria-label="Tipo">
+              <option value="tarefa">Tarefa</option>
+              <option value="reuniao">Reunião (verde na agenda)</option>
+            </select>
+            <label class="prio-toggle"><input id="bk-priority" type="checkbox"> Tarefa prioritária</label>
+            <select id="bk-level" aria-label="Nível de prioridade" hidden>
+              <option value="urgente">Urgente: importante e urgente, fazer agora</option>
+              <option value="importante">Importante: não urgente, agendar</option>
+              <option value="normal">Normal: demais tarefas</option>
+            </select>
+            <button id="bk-submit" class="primary" type="submit">Adicionar ao backlog</button>
+            <button id="bk-cancel" type="button" hidden>Cancelar edição</button>
+          </form>
+  </div>
+</div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -1139,8 +1160,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     $("ev-level").hidden = !ev.is_priority;
     $("ev-submit").textContent = "Salvar alterações";
     $("ev-cancel").hidden = false;
-    $("ev-title").focus();
-    window.scrollTo({ top: $("event-form").getBoundingClientRect().top + window.scrollY - 80, behavior: "smooth" });
+    openModal("modal-tarefa", "Editar tarefa");
   }
   function resetForm() {
     editingId = null;
@@ -1199,6 +1219,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       await loadEvents();
       resetForm();
       setStatus("Tarefa salva");
+      closeModal("modal-tarefa");
     } catch (err) {
       setStatus("Não foi possível adicionar o compromisso");
     }
@@ -1460,6 +1481,39 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   }
 
   // Menu que mostra ou esconde Lembretes, Tarefas e Notas (começam escondidos)
+  // ---------- Modais de inclusão e alteração ----------
+  function openModal(id, title) {
+    const m = $(id);
+    if (title) m.querySelector("h2").textContent = title;
+    m.hidden = false;
+    document.body.style.overflow = "hidden";
+    const first = m.querySelector("input, select");
+    if (first) first.focus();
+  }
+  function closeModal(id) {
+    $(id).hidden = true;
+    document.body.style.overflow = "";
+  }
+  document.querySelectorAll("[data-close]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const id = b.dataset.close;
+      closeModal(id);
+      if (id === "modal-tarefa") resetForm();
+      if (id === "modal-bk") bkResetForm();
+    });
+  });
+  ["modal-tarefa", "modal-bk"].forEach((id) => {
+    $(id).addEventListener("click", (e) => { if (e.target === $(id)) $(id).querySelector("[data-close]").click(); });
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    ["modal-tarefa", "modal-bk"].forEach((id) => { if (!$(id).hidden) $(id).querySelector("[data-close]").click(); });
+  });
+  $("open-task-modal").addEventListener("click", () => { resetForm(); openModal("modal-tarefa", "Nova tarefa"); });
+  $("open-bk-modal").addEventListener("click", () => { bkResetForm(); openModal("modal-bk", "Nova atividade no backlog"); });
+  $("ev-cancel").addEventListener("click", () => closeModal("modal-tarefa"));
+  $("bk-cancel").addEventListener("click", () => closeModal("modal-bk"));
+
   // ---------- Backlog ----------
   let bkItems = [], bkSelected = null, bkTransform = null, bkEditing = null;
   function bkFmtDate(d) { const [y, m, day] = d.split("-"); return day + "/" + m + "/" + y; }
@@ -1724,7 +1778,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     $("bk-level").value = it.priority_level || "normal";
     $("bk-submit").textContent = "Salvar alterações";
     $("bk-cancel").hidden = false;
-    $("bk-form").scrollIntoView({ behavior: "smooth", block: "center" });
+    openModal("modal-bk", "Editar atividade do backlog");
   }
   $("bk-category").addEventListener("change", () => fillBkSubs(""));
   $("bk-priority").addEventListener("change", () => { $("bk-level").hidden = !$("bk-priority").checked; });
@@ -1757,6 +1811,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     bkResetForm();
     await loadBacklog();
     setStatus("Item salvo no backlog");
+    closeModal("modal-bk");
   });
   // Vincula as tarefas do planner que estão em aberto e ainda não estão no backlog
   $("bk-link-open").addEventListener("click", async () => {
