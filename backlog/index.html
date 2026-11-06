@@ -340,6 +340,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     <section class="card compromissos">
       <h2>Atividades a agendar</h2>
       <p class="hint">Data e hora são obrigatórias. Toque em um item para transformá-lo em tarefa ativa na agenda.</p>
+      <button id="link-open" class="primary" type="button">Vincular tarefas em aberto</button>
       <div id="bk-list"></div>
 
       <form id="bk-form" class="event-form">
@@ -567,6 +568,46 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       : "Tarefa ativa criada para " + fmtDate(when.date));
   }
 
+  // Vincula as tarefas do planner que não estão concluídas (ainda não vinculadas)
+  async function linkOpenTasks() {
+    setStatus("Vinculando tarefas…");
+    const [ev, days, bl] = await Promise.all([
+      sb.from("planner_events").select("*"),
+      sb.from("planner_days").select("day,data"),
+      sb.from("planner_backlog").select("source_event_id")
+    ]);
+    if (ev.error) { setStatus("Não foi possível ler as tarefas: " + ev.error.message); return; }
+    if (days.error) { setStatus("Não foi possível ler os dias: " + days.error.message); return; }
+    if (bl.error) { setStatus("Rode o SQL que adiciona source_event_id ao backlog: " + bl.error.message); return; }
+    const dayData = {};
+    (days.data || []).forEach((d) => { dayData[d.day] = d.data || {}; });
+    const linked = new Set((bl.data || []).map((x) => String(x.source_event_id)).filter((x) => x !== "null"));
+    const { data: u } = await sb.auth.getUser();
+    const rows = [];
+    (ev.data || []).forEach((e) => {
+      if (linked.has(String(e.id))) return;
+      const day = e.starts_on || todayStr();
+      if (e.repeat_rule === "none") {
+        const d = dayData[day] || {};
+        const finished = (d.timers && d.timers[e.id] && d.timers[e.id].finished) || (d.doneEvents && d.doneEvents[e.id]);
+        if (finished) return;
+      }
+      rows.push({
+        user_id: u.user.id, title: e.title, kind: e.kind || "tarefa",
+        category_id: e.category_id ? String(e.category_id) : null,
+        subcategory_id: e.subcategory_id ? String(e.subcategory_id) : null,
+        is_priority: !!e.is_priority, priority_level: e.priority_level || null,
+        backlog_date: day, start_time: e.start_time, end_time: e.end_time || null,
+        source_event_id: String(e.id)
+      });
+    });
+    if (!rows.length) { setStatus("Nenhuma tarefa em aberto para vincular"); return; }
+    const { error } = await sb.from("planner_backlog").insert(rows);
+    if (error) { setStatus("Não foi possível vincular: " + error.message); return; }
+    await loadAll();
+    setStatus(rows.length + " tarefa(s) em aberto vinculada(s) ao backlog");
+  }
+
   async function deleteItem(it) {
     const { error } = await sb.from("planner_backlog").delete().eq("id", it.id);
     if (error) { setStatus("Não foi possível excluir: " + error.message); return; }
@@ -605,6 +646,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   $("bk-category").addEventListener("change", () => fillSubSelect(""));
   $("bk-priority").addEventListener("change", () => { $("bk-level").hidden = !$("bk-priority").checked; });
   $("bk-cancel").addEventListener("click", resetForm);
+  $("link-open").addEventListener("click", linkOpenTasks);
 
   $("bk-form").addEventListener("submit", async (e) => {
     e.preventDefault();
