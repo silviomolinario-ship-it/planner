@@ -327,7 +327,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .hist-table { border-collapse: collapse; font-size: 12px; width: 100%; min-width: 1100px; }
 .hist-table th, .hist-table td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; white-space: nowrap; vertical-align: top; }
 .hist-table th { position: sticky; top: 0; background: var(--paper); font-weight: 700; }
-.hist-table td.hist-id { font-family: ui-monospace, Menlo, monospace; font-size: 11px; white-space: normal; word-break: break-all; max-width: 200px; }
+.hist-table td.hist-id { text-align: center; white-space: nowrap; }
 .bk-status { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px; margin-right: 4px; vertical-align: middle; }
 .bk-status.em-backlog { background: var(--soft-yellow); color: #6b5a00; }
 .bk-status.agendado { background: color-mix(in srgb, #2f8f5b 22%, var(--paper)); color: #1d5e3a; }
@@ -350,6 +350,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .modal-head h2 { margin: 0; font-size: 18px; }
 .modal-close { font-size: 22px; line-height: 1; padding: 2px 10px; }
 .modal-box .event-form { margin-top: 8px; padding-top: 0; border-top: none; }
+.acc-table { min-width: 0; }
 </style>
 
 <main>
@@ -482,7 +483,11 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       <div id="dash-cats"></div>
     </div>
     <div class="card hist-card">
-      <h2 class="dash-h">Histórico por data e categoria</h2>
+      <h2 class="dash-h">Acumulado por data</h2>
+      <div id="dash-acc"></div>
+    </div>
+    <div class="card hist-card">
+      <h2 class="dash-h">Tarefas concluídas por data e categoria</h2>
       <div id="dash-history"></div>
     </div>
   </section>
@@ -1860,64 +1865,100 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     const { data, error } = await sb.from("planner_days").select("day,data").order("day", { ascending: false });
     if (error) { box.textContent = "Não foi possível carregar o histórico."; return; }
     const now = Date.now(), hoje = todayStr();
-    const rows = [];
+    const rows = [];          // somente tarefas concluídas
+    const perDay = {};        // por data: tempo de todas as atividades e quantidade concluída
     (data || []).forEach((r) => {
       const d = r.data || {};
       const timers = d.timers || {}, done = d.doneEvents || {};
       new Set([...Object.keys(timers), ...Object.keys(done)]).forEach((id) => {
         const t = timers[id] || {};
         const ms = (t.total || 0) + (t.runningSince && r.day === hoje ? now - t.runningSince : 0);
-        if (ms <= 0 && !done[id]) return;
-        rows.push({ day: r.day, id: id, ev: events.find((x) => String(x.id) === String(id)), ms: ms, done: !!done[id] });
+        const concluida = !!done[id] || !!t.finished;
+        if (ms <= 0 && !concluida) return;
+        const pd = perDay[r.day] || (perDay[r.day] = { ms: 0, concluidas: 0 });
+        pd.ms += ms;
+        if (!concluida) return;
+        pd.concluidas++;
+        rows.push({ day: r.day, id: id, ev: events.find((x) => String(x.id) === String(id)), ms: ms });
       });
     });
     box.textContent = "";
-    if (!rows.length) { box.textContent = "Nenhuma atividade registrada ainda."; return; }
-    const cols = ["Data do registro", "ID", "Título", "Início", "Fim", "Data de início", "Data de fim",
-      "Repetição", "Categoria", "Subcategoria", "Tipo", "Prioritária", "Nível", "Tempo registrado", "Concluída"];
-    const wrap = document.createElement("div");
-    wrap.className = "hist-wrap";
-    const table = document.createElement("table");
-    table.className = "hist-table";
-    const thead = document.createElement("thead");
-    const hr = document.createElement("tr");
-    cols.forEach((c) => { const th = document.createElement("th"); th.textContent = c; hr.append(th); });
-    thead.append(hr);
-    table.append(thead);
-    const tbody = document.createElement("tbody");
-    rows.forEach((row, idx) => {
-      const ev = row.ev;
-      const cat = ev ? catById(ev.category_id) : null;
-      const sub = ev && ev.subcategory_id ? subcats.find((x) => String(x.id) === String(ev.subcategory_id)) : null;
-      const vals = [
-        bkFmtDate(row.day),
-        String(idx + 1),
-        ev ? ev.title : "Tarefa removida",
-        ev ? ev.start_time : "—",
-        ev && ev.end_time ? ev.end_time : "—",
-        ev && ev.starts_on ? bkFmtDate(ev.starts_on) : "—",
-        ev && ev.ends_on ? bkFmtDate(ev.ends_on) : "—",
-        ev ? (REPEAT_LABEL[ev.repeat_rule] || ev.repeat_rule || "—") : "—",
-        cat ? cat.name : "—",
-        sub ? sub.name : "—",
-        ev ? (ev.kind === "reuniao" ? "Reunião" : "Tarefa") : "—",
-        ev ? (ev.is_priority ? "Sim" : "Não") : "—",
-        ev && ev.is_priority && ev.priority_level ? LEVELS[ev.priority_level].label : "—",
-        fmtHM(row.ms),
-        row.done ? "Sim" : "Não"
-      ];
+    if (!rows.length) { box.textContent = "Nenhuma tarefa concluída ainda."; }
+    else {
+      const cols = ["Data do registro", "ID", "Título", "Início", "Fim", "Data de início", "Data de fim",
+        "Repetição", "Categoria", "Subcategoria", "Tipo", "Prioritária", "Nível", "Tempo registrado", "Concluída"];
+      const wrap = document.createElement("div");
+      wrap.className = "hist-wrap";
+      const table = document.createElement("table");
+      table.className = "hist-table";
+      const thead = document.createElement("thead");
+      const hr = document.createElement("tr");
+      cols.forEach((c) => { const th = document.createElement("th"); th.textContent = c; hr.append(th); });
+      thead.append(hr);
+      table.append(thead);
+      const tbody = document.createElement("tbody");
+      rows.forEach((row, idx) => {
+        const ev = row.ev;
+        const cat = ev ? catById(ev.category_id) : null;
+        const sub = ev && ev.subcategory_id ? subcats.find((x) => String(x.id) === String(ev.subcategory_id)) : null;
+        const vals = [
+          bkFmtDate(row.day),
+          String(idx + 1),
+          ev ? ev.title : "Tarefa removida",
+          ev ? ev.start_time : "—",
+          ev && ev.end_time ? ev.end_time : "—",
+          ev && ev.starts_on ? bkFmtDate(ev.starts_on) : "—",
+          ev && ev.ends_on ? bkFmtDate(ev.ends_on) : "—",
+          ev ? (REPEAT_LABEL[ev.repeat_rule] || ev.repeat_rule || "—") : "—",
+          cat ? cat.name : "—",
+          sub ? sub.name : "—",
+          ev ? (ev.kind === "reuniao" ? "Reunião" : "Tarefa") : "—",
+          ev ? (ev.is_priority ? "Sim" : "Não") : "—",
+          ev && ev.is_priority && ev.priority_level ? LEVELS[ev.priority_level].label : "—",
+          fmtHM(row.ms),
+          "Sim"
+        ];
+        const tr = document.createElement("tr");
+        vals.forEach((v, i) => {
+          const td = document.createElement("td");
+          td.textContent = v;
+          if (i === 1) td.className = "hist-id";
+          tr.append(td);
+        });
+        tbody.append(tr);
+      });
+      table.append(tbody);
+      wrap.append(table);
+      box.append(wrap);
+    }
+
+    // Painel separado: acumulado por data (cronológico)
+    const acc = $("dash-acc");
+    acc.textContent = "";
+    const dias = Object.keys(perDay).sort();
+    if (!dias.length) { acc.textContent = "Nenhum tempo registrado ainda."; return; }
+    const at = document.createElement("table");
+    at.className = "hist-table acc-table";
+    const ah = document.createElement("thead");
+    const ahr = document.createElement("tr");
+    ["Data", "Concluídas", "Tempo do dia", "Acumulado"].forEach((c) => { const th = document.createElement("th"); th.textContent = c; ahr.append(th); });
+    ah.append(ahr);
+    at.append(ah);
+    const ab = document.createElement("tbody");
+    let acum = 0;
+    dias.forEach((day) => {
+      const pd = perDay[day];
+      acum += pd.ms;
       const tr = document.createElement("tr");
-      vals.forEach((v, i) => {
+      [bkFmtDate(day), String(pd.concluidas), fmtHM(pd.ms), fmtHM(acum)].forEach((v) => {
         const td = document.createElement("td");
         td.textContent = v;
-        if (i === 1) td.className = "hist-id";
         tr.append(td);
       });
-      tbody.append(tr);
+      ab.append(tr);
     });
-    table.append(tbody);
-    wrap.append(table);
-    box.append(wrap);
+    at.append(ab);
+    acc.append(at);
   }
   let openPanels = [];
   try { openPanels = JSON.parse(localStorage.getItem("planner-panels") || "[]"); } catch (e) {}
