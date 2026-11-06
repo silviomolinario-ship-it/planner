@@ -351,6 +351,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .modal-close { font-size: 22px; line-height: 1; padding: 2px 10px; }
 .modal-box .event-form { margin-top: 8px; padding-top: 0; border-top: none; }
 .acc-table { min-width: 0; }
+.hist-table tfoot td { font-weight: 700; border-top: 2px solid var(--line); border-bottom: none; }
 </style>
 
 <main>
@@ -1928,6 +1929,17 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         tbody.append(tr);
       });
       table.append(tbody);
+      const tfHist = document.createElement("tfoot");
+      const trHist = document.createElement("tr");
+      trHist.className = "hist-total";
+      const totalMs = rows.reduce((acc, r) => acc + r.ms, 0);
+      const cellsHist = cols.map(() => "");
+      cellsHist[0] = "Total";
+      cellsHist[1] = rows.length + " tarefas";
+      cellsHist[13] = fmtHM(totalMs);
+      cellsHist.forEach((v) => { const td = document.createElement("td"); td.textContent = v; trHist.append(td); });
+      tfHist.append(trHist);
+      table.append(tfHist);
       wrap.append(table);
       box.append(wrap);
     }
@@ -1958,6 +1970,14 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       ab.append(tr);
     });
     at.append(ab);
+    const tfAcc = document.createElement("tfoot");
+    const trAcc = document.createElement("tr");
+    trAcc.className = "hist-total";
+    const totConc = dias.reduce((acc, d) => acc + perDay[d].concluidas, 0);
+    const totMs = dias.reduce((acc, d) => acc + perDay[d].ms, 0);
+    ["Total", String(totConc), fmtHM(totMs), ""].forEach((v) => { const td = document.createElement("td"); td.textContent = v; trAcc.append(td); });
+    tfAcc.append(trAcc);
+    at.append(tfAcc);
     acc.append(at);
   }
   let openPanels = [];
