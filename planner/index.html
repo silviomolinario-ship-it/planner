@@ -409,8 +409,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
               <input id="ev-enddate" type="date" aria-label="Data de fim">
             </div>
             <div class="pair">
-              <input id="ev-start" type="time" step="3600" aria-label="Início" required>
-              <input id="ev-end" type="time" step="3600" aria-label="Fim">
+              <input id="ev-start" type="time" aria-label="Início" required>
+              <input id="ev-end" type="time" aria-label="Fim">
             </div>
             <select id="ev-repeat" aria-label="Repetir">
               <option value="none">Não repete</option>
@@ -451,8 +451,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
             <input id="bk-title" type="text" placeholder="Atividade" aria-label="Título da atividade" required>
             <input id="bk-date" type="date" aria-label="Data (opcional)">
             <div class="pair">
-              <input id="bk-start" type="time" step="3600" aria-label="Hora de início (opcional)">
-              <input id="bk-end" type="time" step="3600" aria-label="Hora de fim (opcional)">
+              <input id="bk-start" type="time" aria-label="Hora de início (opcional)">
+              <input id="bk-end" type="time" aria-label="Hora de fim (opcional)">
             </div>
             <select id="bk-category" aria-label="Categoria">
               <option value="">Sem categoria</option>
@@ -1133,8 +1133,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   async function addEvent(e) {
     e.preventDefault();
     const title = $("ev-title").value.trim();
-    const start = hourOnly($("ev-start").value);
-    const end = hourOnly($("ev-end").value);
+    const start = $("ev-start").value;
+    const end = $("ev-end").value;
     const repeat = $("ev-repeat").value;
     const isPrio = $("ev-priority").checked;
     const level = $("ev-level").value;
@@ -1165,7 +1165,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         : await sb.from("planner_events").insert(fields);
       if (error) throw error;
       $("ev-title").value = "";
-      $("ev-start").value = "";
+      $("ev-start").value = nowHour();
       $("ev-end").value = "";
       $("ev-repeat").value = "none";
       $("ev-priority").checked = false;
@@ -1278,13 +1278,11 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   });
   $("ev-priority").addEventListener("change", () => { $("ev-level").hidden = !$("ev-priority").checked; });
 
-  // Horários sempre em hora cheia (minutos 00)
-  function hourOnly(v) {
-    return v ? v.slice(0, 2) + ":00" : v;
+  // Hora inicial sugerida em um novo compromisso: a hora cheia atual (minutos 00)
+  function nowHour() {
+    return String(new Date().getHours()).padStart(2, "0") + ":00";
   }
-  ["ev-start", "ev-end"].forEach((id) => {
-    $(id).addEventListener("change", () => { $(id).value = hourOnly($(id).value); });
-  });
+  $("ev-start").value = nowHour();
   $("ev-startdate").value = todayStr();
   $("ev-enddate").value = todayStr();
 
@@ -1566,20 +1564,18 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     d.setAttribute("aria-label", "Data de execução");
     const s = document.createElement("input");
     s.type = "time";
-    s.step = 3600;
     s.value = it.start_time ? it.start_time.slice(0, 5) : "";
     s.setAttribute("aria-label", "Hora de início da execução");
     pair.append(d, s);
     const e = document.createElement("input");
     e.type = "time";
-    e.step = 3600;
     e.value = it.end_time ? it.end_time.slice(0, 5) : "";
     e.setAttribute("aria-label", "Hora de fim (opcional)");
     const acts = document.createElement("div");
     acts.className = "bk-actions";
     acts.append(
       bkBtn("Confirmar e criar tarefa", () => {
-        const date = d.value, start = hourOnly(s.value), end = hourOnly(e.value) || null;
+        const date = d.value, start = s.value, end = e.value || null;
         if (!date || !start) { setStatus("Informe data e hora de execução"); return; }
         if (end && end <= start) { setStatus("O fim deve ser depois do início"); return; }
         bkActivate(it, { date: date, start: start, end: end });
@@ -1643,8 +1639,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     e.preventDefault();
     const title = $("bk-title").value.trim();
     const date = $("bk-date").value || null;
-    const start = hourOnly($("bk-start").value) || null;
-    const end = hourOnly($("bk-end").value) || null;
+    const start = $("bk-start").value || null;
+    const end = $("bk-end").value || null;
     if (!title) { setStatus("Informe o título"); return; }
     if (end && !start) { setStatus("Informe a hora de início para usar a hora de fim"); return; }
     if (end && end <= start) { setStatus("O fim deve ser depois do início"); return; }
