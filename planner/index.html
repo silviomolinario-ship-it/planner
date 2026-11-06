@@ -327,6 +327,9 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .hist-table th, .hist-table td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; white-space: nowrap; vertical-align: top; }
 .hist-table th { position: sticky; top: 0; background: var(--paper); font-weight: 700; }
 .hist-table td.hist-id { font-family: ui-monospace, Menlo, monospace; font-size: 11px; white-space: normal; word-break: break-all; max-width: 200px; }
+.bk-status { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px; margin-right: 4px; vertical-align: middle; }
+.bk-status.em-backlog { background: var(--soft-yellow); color: #6b5a00; }
+.bk-status.agendado { background: color-mix(in srgb, #2f8f5b 22%, var(--paper)); color: #1d5e3a; }
 </style>
 
 <main>
@@ -448,8 +451,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         </section>
 
         <section class="card backlog" data-panel="backlog" hidden>
-          <h2>Backlog</h2>
-          <p class="hint">Data e hora são opcionais aqui. Para transformar em tarefa ativa, informe a data e a hora de execução.</p>
+          <h2>Backlog · atividades em aberto</h2>
+          <p class="hint">Status: Em backlog = ainda não agendada. Agendado = já está na agenda. Data e hora são opcionais no backlog. Para transformar em tarefa ativa, informe a data e a hora de execução.</p>
           <button id="bk-link-open" class="primary" type="button">Vincular tarefas em aberto</button>
           <div id="bk-list"></div>
           <form id="bk-form" class="event-form">
@@ -1445,18 +1448,37 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   // ---------- Backlog ----------
   let bkItems = [], bkSelected = null, bkTransform = null, bkEditing = null;
   function bkFmtDate(d) { const [y, m, day] = d.split("-"); return day + "/" + m + "/" + y; }
+  let bkAgendado = [];   // tarefas do planner em aberto que ainda não estão no backlog
   async function loadBacklog() {
-    const { data, error } = await sb.from("planner_backlog").select("*");
-    if (error) {
+    const [bl, ev, days] = await Promise.all([
+      sb.from("planner_backlog").select("*"),
+      sb.from("planner_events").select("*"),
+      sb.from("planner_days").select("day,data")
+    ]);
+    if (bl.error) {
       bkItems = [];
+      bkAgendado = [];
       renderBacklog();
       setStatus("Backlog indisponível: confira o SQL do backlog");
       return;
     }
     // Com data primeiro (cronológico); sem data no fim
-    bkItems = (data || []).sort((a, b) =>
+    bkItems = (bl.data || []).sort((a, b) =>
       (a.backlog_date || "9999").localeCompare(b.backlog_date || "9999") ||
       (a.start_time || "99:99").localeCompare(b.start_time || "99:99"));
+    const linked = new Set(bkItems.map((x) => String(x.source_event_id)).filter((x) => x !== "null"));
+    const dayData = {};
+    if (!days.error) (days.data || []).forEach((d) => { dayData[d.day] = d.data || {}; });
+    bkAgendado = [];
+    if (!ev.error) (ev.data || []).forEach((e) => {
+      if (linked.has(String(e.id))) return;
+      if (e.repeat_rule === "none") {
+        const d = dayData[e.starts_on || ""] || {};
+        if ((d.timers && d.timers[e.id] && d.timers[e.id].finished) || (d.doneEvents && d.doneEvents[e.id])) return;
+      }
+      bkAgendado.push(e);
+    });
+    bkAgendado.sort((a, b) => (a.starts_on || "").localeCompare(b.starts_on || "") || (a.start_time || "").localeCompare(b.start_time || ""));
     fillBkCats();
     renderBacklog();
   }
@@ -1509,14 +1531,16 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   function renderBacklog() {
     const box = $("bk-list");
     box.textContent = "";
-    if (!bkItems.length) {
+    if (!bkItems.length && !bkAgendado.length) {
       const p = document.createElement("p");
       p.className = "empty";
-      p.textContent = "Nenhum item no backlog.";
+      p.textContent = "Nenhuma atividade em aberto.";
       box.append(p);
       return;
     }
-    bkItems.forEach((it, i) => {
+    let n = 0;
+    bkItems.forEach((it) => {
+      n++;
       const row = document.createElement("div");
       row.className = "event-row bk-row" + (bkSelected === it.id ? " selected" : "");
       const text = document.createElement("div");
@@ -1525,7 +1549,10 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       const when = it.backlog_date
         ? bkFmtDate(it.backlog_date) + (it.start_time ? " · " + timeRange(it.start_time, it.end_time) : "")
         : "sem data";
-      text.append((i + 1) + ". " + when + "  " + it.title);
+      const status = document.createElement("span");
+      status.className = "bk-status em-backlog";
+      status.textContent = "Em backlog";
+      text.append(status, " " + n + ". " + when + "  " + it.title);
       const sm = document.createElement("small");
       sm.textContent = [bkCatLabel(it),
         it.kind === "reuniao" ? "Reunião" : "",
@@ -1551,6 +1578,26 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
         row.append(acts);
       }
       if (bkTransform === it.id) row.append(bkTransformForm(it));
+      box.append(row);
+    });
+    bkAgendado.forEach((ev) => {
+      n++;
+      const row = document.createElement("div");
+      row.className = "event-row bk-row";
+      const text = document.createElement("div");
+      text.className = "event-text";
+      const status = document.createElement("span");
+      status.className = "bk-status agendado";
+      status.textContent = "Agendado";
+      const span = ev.starts_on ? bkFmtDate(ev.starts_on) + " · " + timeRange(ev.start_time, ev.end_time) : timeRange(ev.start_time, ev.end_time);
+      text.append(status, " " + n + ". " + span + "  " + ev.title);
+      const sm = document.createElement("small");
+      sm.textContent = [bkCatLabel(ev),
+        ev.kind === "reuniao" ? "Reunião" : "",
+        ev.is_priority && ev.priority_level ? "Prioridade: " + LEVELS[ev.priority_level].label : ""
+      ].filter(Boolean).join(" · ");
+      text.append(sm);
+      row.append(text);
       box.append(row);
     });
   }
