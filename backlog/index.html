@@ -1,0 +1,687 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Backlog</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: cabeçalho com data, grade de horas à esquerda, cartões à direita. */
+:root {
+  --bg: #f6f4ef;
+  --paper: #ffffff;
+  --ink: #1f2430;
+  --muted: #6b7180;
+  --line: #d9d6cc;
+  --accent: #2f6f6a;
+  --soft-yellow: #fbf1c4;
+  --soft-pink: #f7dbe3;
+  --soft-blue: #dfe6f7;
+  --soft-red: #f3d3cc;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161a22;
+    --paper: #1f2430;
+    --ink: #eceae3;
+    --muted: #9aa1b2;
+    --line: #3a4150;
+    --accent: #7fc4bd;
+    --soft-yellow: #3a3620;
+    --soft-pink: #3a2630;
+    --soft-blue: #242c40;
+    --soft-red: #3a2521;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161a22;
+  --paper: #1f2430;
+  --ink: #eceae3;
+  --muted: #9aa1b2;
+  --line: #3a4150;
+  --accent: #7fc4bd;
+  --soft-yellow: #3a3620;
+  --soft-pink: #3a2630;
+  --soft-blue: #242c40;
+  --soft-red: #3a2521;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Manrope", system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px;
+  box-sizing: border-box;
+}
+[hidden] { display: none !important; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--paper);
+  font-weight: 700;
+}
+button.ghost {
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--muted);
+  border-color: transparent;
+  background: transparent;
+}
+
+/* Login */
+#auth {
+  max-width: 360px;
+  margin: 12vh auto 0;
+  display: grid;
+  gap: 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+}
+#auth h1 { margin: 0; font-size: 20px; font-weight: 800; }
+#auth p { margin: 0; color: var(--muted); font-size: 14px; text-wrap: balance; }
+input[type="email"], input[type="text"], input[type="date"], input[type="time"], input[type="number"], select, textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+/* Cabeçalho */
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.date-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--soft-blue);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 12px;
+  min-width: 0;
+}
+.date-field span { font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; font-size: 12px; }
+.date-field input { background: transparent; border: none; padding: 4px; width: auto; min-width: 0; }
+.spacer { flex: 1; }
+.status { color: var(--muted); font-size: 13px; }
+
+/* Grade */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+@media (min-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+}
+.hours {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 14px;
+  display: grid;
+  gap: 0;
+  min-width: 0;
+  position: relative;
+}
+.hour {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: start;
+  gap: 0 10px;
+  height: 56px;
+  box-sizing: border-box;
+  padding: 0;
+  border-bottom: 1px dashed var(--line);
+}
+.hour:last-child { border-bottom: none; }
+.hour time { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); align-self: start; padding-top: 6px; }
+.hour input {
+  background: transparent;
+  border: none;
+  padding: 6px 2px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.hour input:focus-visible { border-radius: 4px; }
+
+/* Blocos de compromissos e prioridades dentro da grade */
+.timeline { position: absolute; top: 8px; bottom: 8px; left: 80px; right: 14px; pointer-events: none; }
+.hevent {
+  position: absolute;
+  box-sizing: border-box;
+  overflow: hidden;
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  background: var(--soft-blue);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 13px;
+  min-width: 0;
+}
+.hevent.prio { background: var(--soft-pink); border-left-color: var(--ink); }
+.hevent input[type="checkbox"] { width: 18px; height: 18px; margin: 0; }
+.hevent span { overflow-wrap: anywhere; }
+.hevent.done span { text-decoration: line-through; color: var(--muted); }
+.hevent.done { opacity: 0.7; padding-right: 28px; }
+.hevent .done-badge {
+  position: absolute; top: 4px; right: 6px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #2f8f5b; color: #fff;
+  font-style: normal; font-size: 12px; font-weight: 700; line-height: 18px; text-align: center;
+}
+.event-row.done .event-text { text-decoration: line-through; color: var(--muted); }
+.event-row.done .event-text small { text-decoration: none; }
+.task-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.task-filter button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--paper); font-weight: 700; }
+
+.side { display: grid; gap: 14px; min-width: 0; }
+.panel-menu { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.grid.solo { grid-template-columns: minmax(0, 1fr); }
+.panel-menu button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--paper); font-weight: 700; }
+.prio-toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.prio-toggle input { width: 18px; height: 18px; margin: 0; }
+.matrix { color: var(--muted); font-size: 12px; margin: 0; line-height: 1.5; }
+.hevent.lvl-urgente { background: var(--soft-red); border-left-color: #c2410c; }
+.hevent.lvl-importante { background: var(--soft-yellow); }
+.hevent.lvl-normal { background: var(--soft-blue); }
+.hevent.reuniao { background: color-mix(in srgb, #2f8f5b 22%, var(--paper)); border-left-color: #2f8f5b; }
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-width: 0;
+}
+.card h2 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.card.reminders { background: color-mix(in srgb, #2f8f5b 16%, var(--paper)); }
+.card.prios { background: var(--soft-blue); }
+.card.compromissos { background: var(--paper); }
+.card.notas { background: color-mix(in srgb, #5aa9e6 18%, var(--paper)); }
+.card textarea { background: var(--paper); min-height: 110px; resize: vertical; }
+.note { color: var(--muted); font-size: 12px; margin: -4px 0 10px; }
+.prio-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 76px 76px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.prio-row input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
+.prio-row input[type="text"] { background: transparent; border: none; border-bottom: 1px dashed var(--line); border-radius: 0; padding: 6px 2px; }
+.prio-row input[type="time"] { background: var(--paper); padding: 4px 4px; font-size: 13px; min-width: 0; }
+
+/* Compromissos (lista de gerenciamento) */
+.event-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.event-row:last-child { border-bottom: none; }
+.event-row input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
+.event-text { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.event-text small { color: var(--muted); display: block; font-size: 12px; }
+.cats { display: grid; gap: 8px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.cat-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cat-row .name { font-weight: 800; min-width: 90px; }
+.cat-row .ghost { font-size: 12px; }
+.cat-new { display: grid; gap: 8px; }
+.palette { display: flex; flex-wrap: wrap; gap: 6px; }
+.swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; padding: 0; cursor: pointer; }
+.swatch[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 2px var(--paper); }
+#cat-add { justify-self: start; }
+#cats-screen { max-width: 640px; margin: 0 auto; }
+#cats-screen .card { display: grid; gap: 12px; }
+.screen-title { margin: 0; font-size: 18px; font-weight: 800; }
+#dash-screen { max-width: 720px; margin: 0 auto; }
+#dash-screen .card { display: grid; gap: 8px; }
+.total { margin: 0 0 4px; font-weight: 800; font-size: 16px; }
+.cat-group { border-bottom: 1px solid var(--line); padding: 4px 0; }
+.cat-group:last-child { border-bottom: none; }
+.cat-head { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: none; padding: 8px 0; cursor: pointer; text-align: left; }
+.cat-head .label { font-weight: 800; min-width: 110px; }
+.bar { flex: 1; height: 12px; background: var(--soft-blue); border-radius: 6px; overflow: hidden; min-width: 40px; }
+.bar > span { display: block; height: 100%; }
+.cat-head .time, .task-row .time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.task-rows { display: grid; gap: 6px; padding: 2px 0 8px 14px; }
+.task-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.task-row .name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.cat-block { display: grid; gap: 6px; padding-bottom: 10px; border-bottom: 1px dashed var(--line); }
+.sub-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; background: var(--soft-blue); border-radius: 999px; padding: 2px 4px 2px 10px; font-size: 13px; }
+.chip .ghost { padding: 0 6px; font-size: 14px; }
+.sub-add { display: flex; gap: 8px; flex-wrap: wrap; }
+.sub-add input { flex: 1; min-width: 140px; }
+.sub-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; background: none; border: none; padding: 6px 0; cursor: pointer; font-weight: 700; color: var(--ink); text-align: left; }
+.sub-task { padding-left: 14px; }
+.timer { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.clock { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); margin-right: 4px; }
+.timer small { color: var(--muted); font-size: 12px; }
+.timer-btn { color: #fff; border: none; font-weight: 700; padding: 6px 12px; }
+.timer-btn.start { background: #2f8f5b; }
+.timer-btn.pause { background: #e0a800; color: #1f2430; }
+.timer-btn.end { background: #c0392b; }
+.empty { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+.event-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.event-form .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.event-form .hint { color: var(--muted); font-size: 12px; margin: 0; }
+.bk-row { grid-template-columns: minmax(0, 1fr); }
+.bk-row.selected { background: var(--soft-blue); border-radius: 8px; padding-left: 8px; padding-right: 8px; }
+.bk-text { cursor: pointer; }
+.bk-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.bk-transform { display: grid; gap: 8px; margin-top: 8px; padding: 10px; border: 1px dashed var(--line); border-radius: 8px; }
+.bk-transform .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bk-transform .hint { margin: 0; }
+</style>
+
+<main>
+  <section id="auth" hidden>
+    <h1>Backlog</h1>
+    <p>Entre com o mesmo e-mail do planner. Você recebe um código de 8 dígitos.</p>
+    <input id="email" type="email" placeholder="seu@email.com" autocomplete="email">
+    <button id="send-code" class="primary" type="button">Enviar código</button>
+    <input id="code" type="text" inputmode="numeric" maxlength="8" placeholder="Código de 8 dígitos" autocomplete="one-time-code" hidden>
+    <button id="verify" class="primary" type="button" hidden>Entrar</button>
+    <p id="auth-msg" role="status"></p>
+  </section>
+
+  <section id="app" hidden>
+    <header class="top">
+      <a href="../" style="align-self:center;font-weight:700">‹ Início</a>
+      <h1 style="margin:0;font-size:20px">Backlog</h1>
+      <span class="spacer"></span>
+      <span id="status" class="status" role="status"></span>
+      <button id="logout" type="button">Sair</button>
+    </header>
+
+    <section class="card compromissos">
+      <h2>Atividades a agendar</h2>
+      <p class="hint">Data e hora são obrigatórias. Toque em um item para transformá-lo em tarefa ativa na agenda.</p>
+      <div id="bk-list"></div>
+
+      <form id="bk-form" class="event-form">
+        <input id="bk-title" type="text" placeholder="Atividade" aria-label="Título da atividade" required>
+        <div class="pair">
+          <input id="bk-date" type="date" aria-label="Data" required>
+          <input id="bk-start" type="time" step="3600" aria-label="Hora de início" required>
+        </div>
+        <input id="bk-end" type="time" step="3600" aria-label="Hora de fim (opcional)">
+        <select id="bk-category" aria-label="Categoria">
+          <option value="">Sem categoria</option>
+        </select>
+        <select id="bk-subcategory" aria-label="Subcategoria">
+          <option value="">Sem subcategoria</option>
+        </select>
+        <select id="bk-kind" aria-label="Tipo">
+          <option value="tarefa">Tarefa</option>
+          <option value="reuniao">Reunião (verde na agenda)</option>
+        </select>
+        <label class="prio-toggle"><input id="bk-priority" type="checkbox"> Tarefa prioritária</label>
+        <select id="bk-level" aria-label="Nível de prioridade" hidden>
+          <option value="urgente">Urgente: importante e urgente, fazer agora</option>
+          <option value="importante">Importante: não urgente, agendar</option>
+          <option value="normal">Normal: demais tarefas</option>
+        </select>
+        <button id="bk-submit" class="primary" type="submit">Adicionar ao backlog</button>
+        <button id="bk-cancel" type="button" hidden>Cancelar edição</button>
+      </form>
+    </section>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(function () {
+  const SUPABASE_URL = "https://llfthqksekwgxczihpdh.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_Fs2Rdx-h_kuMW-fUnZRj2g_d5It1BgM";
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const $ = (id) => document.getElementById(id);
+  const authEl = $("auth"), appEl = $("app"), statusEl = $("status"), authMsg = $("auth-msg");
+  const LEVELS = { urgente: "Urgente", importante: "Importante", normal: "Normal" };
+
+  let items = [], cats = [], subs = [];
+  let selectedId = null, transformId = null, editingId = null;
+
+  function todayStr() { return new Date().toLocaleDateString("en-CA"); }
+  function setStatus(t) { statusEl.textContent = t; }
+  function hourOnly(v) { return v ? v.slice(0, 2) + ":00" : ""; }
+  function fmtDate(d) { const [y, m, day] = d.split("-"); return day + "/" + m + "/" + y; }
+  function timeRange(s, e) { return s.slice(0, 5) + (e ? " – " + e.slice(0, 5) : ""); }
+  function catById(id) { return cats.find((c) => String(c.id) === String(id)); }
+  function subById(id) { return subs.find((s) => String(s.id) === String(id)); }
+  function catLabel(it) {
+    const c = catById(it.category_id);
+    if (!c) return "";
+    const s = subById(it.subcategory_id);
+    return s ? c.name + " › " + s.name : c.name;
+  }
+  function btn(label, fn, cls) {
+    const b = document.createElement("button");
+    b.type = "button";
+    if (cls) b.className = cls;
+    b.textContent = label;
+    b.addEventListener("click", fn);
+    return b;
+  }
+  function armedBtn(label, fn) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "danger";
+    b.textContent = label;
+    b.addEventListener("click", () => {
+      if (!b.dataset.armed) {
+        b.dataset.armed = "1";
+        b.textContent = "Confirmar";
+        setTimeout(() => { delete b.dataset.armed; b.textContent = label; }, 4000);
+        return;
+      }
+      fn();
+    });
+    return b;
+  }
+
+  // ---------- dados ----------
+  async function loadAll() {
+    const problems = [];
+    try {
+      const [c, s, b] = await Promise.all([
+        sb.from("planner_categories").select("*").order("name", { ascending: true }),
+        sb.from("planner_subcategories").select("*").order("name", { ascending: true }),
+        sb.from("planner_backlog").select("*").order("backlog_date", { ascending: true }).order("start_time", { ascending: true })
+      ]);
+      if (c.error) problems.push("categorias"); else cats = c.data || [];
+      if (s.error) problems.push("subcategorias"); else subs = s.data || [];
+      if (b.error) problems.push("backlog (" + b.error.message + ")"); else items = b.data || [];
+    } catch (err) {
+      problems.push("conexão (" + err.message + ")");
+    }
+    fillCatSelect();
+    renderList();
+    setStatus(problems.length ? "Não carregou: " + problems.join(" | ") : "Sincronizado");
+  }
+
+  function fillCatSelect() {
+    const sel = $("bk-category"), keep = sel.value;
+    sel.textContent = "";
+    sel.append(new Option("Sem categoria", ""));
+    cats.forEach((c) => sel.append(new Option(c.name, c.id)));
+    sel.value = keep;
+    fillSubSelect(undefined);
+  }
+  function fillSubSelect(keep) {
+    const cat = $("bk-category").value, sel = $("bk-subcategory");
+    const prev = keep === undefined ? sel.value : keep;
+    sel.textContent = "";
+    sel.append(new Option("Sem subcategoria", ""));
+    subs.filter((s) => String(s.category_id) === String(cat)).forEach((s) => sel.append(new Option(s.name, s.id)));
+    sel.value = prev;
+  }
+
+  // ---------- lista ----------
+  function renderList() {
+    const box = $("bk-list");
+    box.textContent = "";
+    if (!items.length) {
+      const p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = "Nenhum item no backlog.";
+      box.append(p);
+      return;
+    }
+    items.forEach((it, i) => {
+      const row = document.createElement("div");
+      row.className = "event-row bk-row" + (selectedId === it.id ? " selected" : "");
+
+      const text = document.createElement("div");
+      text.className = "event-text bk-text";
+      text.tabIndex = 0;
+      text.append((i + 1) + ". " + fmtDate(it.backlog_date) + " · " + timeRange(it.start_time, it.end_time) + "  " + it.title);
+      const sm = document.createElement("small");
+      const extra = [
+        catLabel(it),
+        it.kind === "reuniao" ? "Reunião" : "",
+        it.is_priority && it.priority_level ? "Prioridade: " + LEVELS[it.priority_level] : ""
+      ].filter(Boolean).join(" · ");
+      sm.textContent = extra;
+      text.append(sm);
+      const pick = () => {
+        selectedId = selectedId === it.id ? null : it.id;
+        if (selectedId !== it.id) transformId = null;
+        renderList();
+      };
+      text.addEventListener("click", pick);
+      text.addEventListener("keydown", (e) => { if (e.key === "Enter") pick(); });
+      row.append(text);
+
+      if (selectedId === it.id) {
+        const acts = document.createElement("div");
+        acts.className = "bk-actions";
+        acts.append(
+          btn("Transformar em tarefa ativa", () => { transformId = it.id; renderList(); }, "primary"),
+          btn("Editar", () => startEdit(it)),
+          armedBtn("Excluir", () => deleteItem(it))
+        );
+        row.append(acts);
+      }
+      if (transformId === it.id) row.append(transformForm(it));
+      box.append(row);
+    });
+  }
+
+  // Formulário de ativação: data e hora de execução são obrigatórias
+  function transformForm(it) {
+    const f = document.createElement("div");
+    f.className = "bk-transform";
+    const h = document.createElement("p");
+    h.className = "hint";
+    h.textContent = "Informe quando esta atividade será executada:";
+    const pair = document.createElement("div");
+    pair.className = "pair";
+    const d = document.createElement("input");
+    d.type = "date";
+    d.value = todayStr();
+    d.setAttribute("aria-label", "Data de execução");
+    const s = document.createElement("input");
+    s.type = "time";
+    s.step = 3600;
+    s.required = true;
+    s.setAttribute("aria-label", "Hora de início da execução");
+    pair.append(d, s);
+    const e = document.createElement("input");
+    e.type = "time";
+    e.step = 3600;
+    e.setAttribute("aria-label", "Hora de fim (opcional)");
+    const acts = document.createElement("div");
+    acts.className = "bk-actions";
+    acts.append(
+      btn("Confirmar e criar tarefa", () => {
+        const date = d.value, start = hourOnly(s.value), end = hourOnly(e.value) || null;
+        if (!date || !start) { setStatus("Informe data e hora de execução"); return; }
+        if (end && end <= start) { setStatus("O fim deve ser depois do início"); return; }
+        activate(it, { date: date, start: start, end: end });
+      }, "primary"),
+      btn("Cancelar", () => { transformId = null; renderList(); })
+    );
+    f.append(h, pair, e, acts);
+    return f;
+  }
+
+  async function activate(it, when) {
+    const { data: u } = await sb.auth.getUser();
+    const { error } = await sb.from("planner_events").insert({
+      user_id: u.user.id, title: it.title, start_time: when.start, end_time: when.end,
+      repeat_rule: "none", starts_on: when.date, ends_on: null, kind: it.kind,
+      category_id: it.category_id || null, subcategory_id: it.subcategory_id || null,
+      is_priority: !!it.is_priority, priority_level: it.is_priority ? it.priority_level : null
+    });
+    if (error) { setStatus("Não foi possível criar a tarefa: " + error.message); return; }
+    const { error: dErr } = await sb.from("planner_backlog").delete().eq("id", it.id);
+    transformId = null;
+    selectedId = null;
+    await loadAll();
+    setStatus(dErr ? "Tarefa criada, mas não saiu do backlog: " + dErr.message
+      : "Tarefa ativa criada para " + fmtDate(when.date));
+  }
+
+  async function deleteItem(it) {
+    const { error } = await sb.from("planner_backlog").delete().eq("id", it.id);
+    if (error) { setStatus("Não foi possível excluir: " + error.message); return; }
+    selectedId = null;
+    await loadAll();
+    setStatus("Item excluído");
+  }
+
+  // ---------- formulário ----------
+  function resetForm() {
+    editingId = null;
+    $("bk-form").reset();
+    $("bk-date").value = todayStr();
+    $("bk-level").hidden = true;
+    $("bk-submit").textContent = "Adicionar ao backlog";
+    $("bk-cancel").hidden = true;
+    fillSubSelect("");
+  }
+  function startEdit(it) {
+    editingId = it.id;
+    $("bk-title").value = it.title;
+    $("bk-date").value = it.backlog_date;
+    $("bk-start").value = it.start_time.slice(0, 5);
+    $("bk-end").value = it.end_time ? it.end_time.slice(0, 5) : "";
+    $("bk-category").value = it.category_id || "";
+    fillSubSelect(it.subcategory_id || "");
+    $("bk-kind").value = it.kind || "tarefa";
+    $("bk-priority").checked = !!it.is_priority;
+    $("bk-level").hidden = !it.is_priority;
+    $("bk-level").value = it.priority_level || "normal";
+    $("bk-submit").textContent = "Salvar alterações";
+    $("bk-cancel").hidden = false;
+    $("bk-form").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  $("bk-category").addEventListener("change", () => fillSubSelect(""));
+  $("bk-priority").addEventListener("change", () => { $("bk-level").hidden = !$("bk-priority").checked; });
+  $("bk-cancel").addEventListener("click", resetForm);
+
+  $("bk-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = $("bk-title").value.trim();
+    const date = $("bk-date").value;
+    const start = hourOnly($("bk-start").value);
+    const end = hourOnly($("bk-end").value) || null;
+    if (!title || !date || !start) { setStatus("Preencha título, data e hora de início"); return; }
+    if (end && end <= start) { setStatus("O fim deve ser depois do início"); return; }
+    const isPrio = $("bk-priority").checked;
+    const row = {
+      title: title,
+      kind: $("bk-kind").value,
+      category_id: $("bk-category").value || null,
+      subcategory_id: $("bk-subcategory").value || null,
+      is_priority: isPrio,
+      priority_level: isPrio ? $("bk-level").value : null,
+      backlog_date: date,
+      start_time: start,
+      end_time: end
+    };
+    let res;
+    if (editingId) {
+      res = await sb.from("planner_backlog").update(row).eq("id", editingId);
+    } else {
+      const { data: u } = await sb.auth.getUser();
+      res = await sb.from("planner_backlog").insert(Object.assign({ user_id: u.user.id }, row));
+    }
+    if (res.error) { setStatus("Não foi possível salvar: " + res.error.message); return; }
+    resetForm();
+    await loadAll();
+    setStatus("Item salvo no backlog");
+  });
+
+  // ---------- login ----------
+  $("logout").addEventListener("click", async () => { await sb.auth.signOut(); });
+  const emailEl = $("email"), codeEl = $("code");
+  emailEl.value = localStorage.getItem("planner-email") || "";
+
+  $("send-code").addEventListener("click", async () => {
+    const email = emailEl.value.trim();
+    if (!email) { authMsg.textContent = "Digite seu e-mail."; return; }
+    authMsg.textContent = "Enviando código…";
+    const { error } = await sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } });
+    if (error) { authMsg.textContent = "Não foi possível enviar: " + error.message; return; }
+    localStorage.setItem("planner-email", email);
+    codeEl.hidden = false;
+    $("verify").hidden = false;
+    authMsg.textContent = "Confira seu e-mail e digite o código.";
+    codeEl.focus();
+  });
+
+  $("verify").addEventListener("click", async () => {
+    const token = codeEl.value.trim();
+    if (!token) { authMsg.textContent = "Digite o código."; return; }
+    const { error } = await sb.auth.verifyOtp({ email: emailEl.value.trim(), token: token, type: "email" });
+    if (error) authMsg.textContent = "Código inválido ou expirado.";
+  });
+
+  function showApp(on) {
+    authEl.hidden = on;
+    appEl.hidden = !on;
+  }
+
+  sb.auth.onAuthStateChange((event, session) => {
+    if (session) {
+      showApp(true);
+      resetForm();
+      loadAll();
+    } else {
+      showApp(false);
+    }
+  });
+  sb.auth.getSession().then(({ data }) => {
+    if (!data.session) showApp(false);
+  });
+})();
+</script>
+</body>
+</html>
