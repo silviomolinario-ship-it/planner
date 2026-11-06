@@ -270,7 +270,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 #cats-screen { max-width: 640px; margin: 0 auto; }
 #cats-screen .card { display: grid; gap: 12px; }
 .screen-title { margin: 0; font-size: 18px; font-weight: 800; }
-#dash-screen { max-width: 720px; margin: 0 auto; }
+#dash-screen { width: 100%; max-width: 720px; margin: 0 auto; box-sizing: border-box; }
+#dash-screen > .card { min-width: 0; }
 #dash-screen .card { display: grid; gap: 8px; }
 .total { margin: 0 0 4px; font-weight: 800; font-size: 16px; }
 .cat-group { border-bottom: 1px solid var(--line); padding: 4px 0; }
@@ -341,6 +342,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 .bk-extra .bk-transform { margin-top: 0; }
 .bk-table .bk-status { margin-right: 0; }
 .hist-table td.hist-id { text-align: center; }
+.hist-card { min-width: 0; overflow: hidden; }
 </style>
 
 <main>
@@ -531,6 +533,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     <div class="card">
       <p id="dash-total" class="total"></p>
       <div id="dash-cats"></div>
+    </div>
+    <div class="card hist-card">
       <h2 class="dash-h">Histórico por data e categoria</h2>
       <div id="dash-history"></div>
     </div>
