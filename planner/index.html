@@ -308,6 +308,20 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
 }
 .event-form .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .event-form .hint { color: var(--muted); font-size: 12px; margin: 0; }
+.bk-row { grid-template-columns: minmax(0, 1fr); }
+.bk-row.selected { background: var(--soft-blue); border-radius: 8px; padding-left: 8px; padding-right: 8px; }
+.bk-text { cursor: pointer; }
+.bk-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.bk-transform { display: grid; gap: 8px; margin-top: 8px; padding: 10px; border: 1px dashed var(--line); border-radius: 8px; }
+.bk-transform .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bk-transform .hint { margin: 0; }
+.dash-h { font-size: 15px; margin: 14px 0 4px; }
+.hist-day { border-top: 1px solid var(--line); padding: 8px 0; }
+.hist-day summary { font-weight: 700; cursor: pointer; }
+.hist-cat { display: flex; align-items: center; gap: 8px; margin: 8px 0 2px; }
+.hist-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.hist-task { font-size: 13px; padding-left: 18px; color: var(--ink); }
+.hist-task.done { color: var(--muted); }
 </style>
 
 <main>
@@ -334,7 +348,6 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       <span id="status" class="status" role="status"></span>
       <span class="status" title="versão desta página">v.2026-11-05-2035</span>
       <a href="../" style="align-self:center;font-weight:700">‹ Início</a>
-      <a href="../backlog/" style="align-self:center;font-weight:700">Backlog</a>
       <button id="open-cats" type="button">Categorias</button>
       <button id="logout" type="button">Sair</button>
     </header>
@@ -344,6 +357,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       <button type="button" data-toggle="lembretes" aria-pressed="false">Lembretes</button>
       <button type="button" data-toggle="tarefas" aria-pressed="false">Tarefas</button>
       <button type="button" data-toggle="notas" aria-pressed="false">Notas</button>
+      <button type="button" data-toggle="backlog" aria-pressed="false">Backlog</button>
       <button id="open-dash" type="button">Dashboard</button>
     </nav>
 
@@ -428,6 +442,38 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
           </form>
         </section>
 
+        <section class="card backlog" data-panel="backlog" hidden>
+          <h2>Backlog</h2>
+          <p class="hint">Data e hora são opcionais aqui. Para transformar em tarefa ativa, informe a data e a hora de execução.</p>
+          <button id="bk-link-open" class="primary" type="button">Vincular tarefas em aberto</button>
+          <div id="bk-list"></div>
+          <form id="bk-form" class="event-form">
+            <input id="bk-title" type="text" placeholder="Atividade" aria-label="Título da atividade" required>
+            <input id="bk-date" type="date" aria-label="Data (opcional)">
+            <div class="pair">
+              <input id="bk-start" type="time" step="3600" aria-label="Hora de início (opcional)">
+              <input id="bk-end" type="time" step="3600" aria-label="Hora de fim (opcional)">
+            </div>
+            <select id="bk-category" aria-label="Categoria">
+              <option value="">Sem categoria</option>
+            </select>
+            <select id="bk-subcategory" aria-label="Subcategoria">
+              <option value="">Sem subcategoria</option>
+            </select>
+            <select id="bk-kind" aria-label="Tipo">
+              <option value="tarefa">Tarefa</option>
+              <option value="reuniao">Reunião (verde na agenda)</option>
+            </select>
+            <label class="prio-toggle"><input id="bk-priority" type="checkbox"> Tarefa prioritária</label>
+            <select id="bk-level" aria-label="Nível de prioridade" hidden>
+              <option value="urgente">Urgente: importante e urgente, fazer agora</option>
+              <option value="importante">Importante: não urgente, agendar</option>
+              <option value="normal">Normal: demais tarefas</option>
+            </select>
+            <button id="bk-submit" class="primary" type="submit">Adicionar ao backlog</button>
+            <button id="bk-cancel" type="button" hidden>Cancelar edição</button>
+          </form>
+        </section>
         <section class="card notas" data-panel="notas" hidden>
           <h2>Notas</h2>
           <textarea data-field="notas" aria-label="Notas"></textarea>
@@ -466,6 +512,8 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     <div class="card">
       <p id="dash-total" class="total"></p>
       <div id="dash-cats"></div>
+      <h2 class="dash-h">Histórico por data e categoria</h2>
+      <div id="dash-history"></div>
     </div>
   </section>
 </main>
@@ -1311,6 +1359,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
     }, 0);
     dashData = { groups: list, grand: list.reduce((s, g) => s + g.total, 0), meet: meet };
     paintDash();
+    renderHistory();
   }
   function paintDash() {
     const { groups, grand } = dashData;
@@ -1390,6 +1439,332 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
   }
 
   // Menu que mostra ou esconde Lembretes, Tarefas e Notas (começam escondidos)
+  // ---------- Backlog ----------
+  let bkItems = [], bkSelected = null, bkTransform = null, bkEditing = null;
+  function bkFmtDate(d) { const [y, m, day] = d.split("-"); return day + "/" + m + "/" + y; }
+  async function loadBacklog() {
+    const { data, error } = await sb.from("planner_backlog").select("*");
+    if (error) {
+      bkItems = [];
+      renderBacklog();
+      setStatus("Backlog indisponível: confira o SQL do backlog");
+      return;
+    }
+    // Com data primeiro (cronológico); sem data no fim
+    bkItems = (data || []).sort((a, b) =>
+      (a.backlog_date || "9999").localeCompare(b.backlog_date || "9999") ||
+      (a.start_time || "99:99").localeCompare(b.start_time || "99:99"));
+    fillBkCats();
+    renderBacklog();
+  }
+  function fillBkCats() {
+    const sel = $("bk-category"), keep = sel.value;
+    sel.textContent = "";
+    sel.append(new Option("Sem categoria", ""));
+    categories.forEach((c) => sel.append(new Option(c.name, c.id)));
+    sel.value = keep;
+    fillBkSubs(undefined);
+  }
+  function fillBkSubs(keep) {
+    const cat = $("bk-category").value, sel = $("bk-subcategory");
+    const prev = keep === undefined ? sel.value : keep;
+    sel.textContent = "";
+    sel.append(new Option("Sem subcategoria", ""));
+    subcats.filter((s) => String(s.category_id) === String(cat)).forEach((s) => sel.append(new Option(s.name, s.id)));
+    sel.value = prev;
+  }
+  function bkCatLabel(it) {
+    const c = catById(it.category_id);
+    if (!c) return "";
+    const s = subcats.find((x) => String(x.id) === String(it.subcategory_id));
+    return s ? c.name + " › " + s.name : c.name;
+  }
+  function bkBtn(label, fn, cls) {
+    const b = document.createElement("button");
+    b.type = "button";
+    if (cls) b.className = cls;
+    b.textContent = label;
+    b.addEventListener("click", fn);
+    return b;
+  }
+  function bkArmed(label, fn) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "danger";
+    b.textContent = label;
+    b.addEventListener("click", () => {
+      if (!b.dataset.armed) {
+        b.dataset.armed = "1";
+        b.textContent = "Confirmar";
+        setTimeout(() => { delete b.dataset.armed; b.textContent = label; }, 4000);
+        return;
+      }
+      fn();
+    });
+    return b;
+  }
+  function renderBacklog() {
+    const box = $("bk-list");
+    box.textContent = "";
+    if (!bkItems.length) {
+      const p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = "Nenhum item no backlog.";
+      box.append(p);
+      return;
+    }
+    bkItems.forEach((it, i) => {
+      const row = document.createElement("div");
+      row.className = "event-row bk-row" + (bkSelected === it.id ? " selected" : "");
+      const text = document.createElement("div");
+      text.className = "event-text bk-text";
+      text.tabIndex = 0;
+      const when = it.backlog_date
+        ? bkFmtDate(it.backlog_date) + (it.start_time ? " · " + timeRange(it.start_time, it.end_time) : "")
+        : "sem data";
+      text.append((i + 1) + ". " + when + "  " + it.title);
+      const sm = document.createElement("small");
+      sm.textContent = [bkCatLabel(it),
+        it.kind === "reuniao" ? "Reunião" : "",
+        it.is_priority && it.priority_level ? "Prioridade: " + LEVELS[it.priority_level].label : ""
+      ].filter(Boolean).join(" · ");
+      text.append(sm);
+      const pick = () => {
+        bkSelected = bkSelected === it.id ? null : it.id;
+        if (bkSelected !== it.id) bkTransform = null;
+        renderBacklog();
+      };
+      text.addEventListener("click", pick);
+      text.addEventListener("keydown", (e) => { if (e.key === "Enter") pick(); });
+      row.append(text);
+      if (bkSelected === it.id) {
+        const acts = document.createElement("div");
+        acts.className = "bk-actions";
+        acts.append(
+          bkBtn("Transformar em tarefa ativa", () => { bkTransform = it.id; renderBacklog(); }, "primary"),
+          bkBtn("Editar", () => bkStartEdit(it)),
+          bkArmed("Excluir", () => bkDelete(it))
+        );
+        row.append(acts);
+      }
+      if (bkTransform === it.id) row.append(bkTransformForm(it));
+      box.append(row);
+    });
+  }
+  // Ativação: data e hora de execução são obrigatórias aqui
+  function bkTransformForm(it) {
+    const f = document.createElement("div");
+    f.className = "bk-transform";
+    const h = document.createElement("p");
+    h.className = "hint";
+    h.textContent = "Informe quando esta atividade será executada (obrigatório):";
+    const pair = document.createElement("div");
+    pair.className = "pair";
+    const d = document.createElement("input");
+    d.type = "date";
+    d.value = it.backlog_date || todayStr();
+    d.setAttribute("aria-label", "Data de execução");
+    const s = document.createElement("input");
+    s.type = "time";
+    s.step = 3600;
+    s.value = it.start_time ? it.start_time.slice(0, 5) : "";
+    s.setAttribute("aria-label", "Hora de início da execução");
+    pair.append(d, s);
+    const e = document.createElement("input");
+    e.type = "time";
+    e.step = 3600;
+    e.value = it.end_time ? it.end_time.slice(0, 5) : "";
+    e.setAttribute("aria-label", "Hora de fim (opcional)");
+    const acts = document.createElement("div");
+    acts.className = "bk-actions";
+    acts.append(
+      bkBtn("Confirmar e criar tarefa", () => {
+        const date = d.value, start = hourOnly(s.value), end = hourOnly(e.value) || null;
+        if (!date || !start) { setStatus("Informe data e hora de execução"); return; }
+        if (end && end <= start) { setStatus("O fim deve ser depois do início"); return; }
+        bkActivate(it, { date: date, start: start, end: end });
+      }, "primary"),
+      bkBtn("Cancelar", () => { bkTransform = null; renderBacklog(); })
+    );
+    f.append(h, pair, e, acts);
+    return f;
+  }
+  async function bkActivate(it, when) {
+    const { data: u } = await sb.auth.getUser();
+    const { error } = await sb.from("planner_events").insert({
+      user_id: u.user.id, title: it.title, start_time: when.start, end_time: when.end,
+      repeat_rule: "none", starts_on: when.date, ends_on: null, kind: it.kind || "tarefa",
+      category_id: it.category_id || null, subcategory_id: it.subcategory_id || null,
+      is_priority: !!it.is_priority, priority_level: it.is_priority ? it.priority_level : null
+    });
+    if (error) { setStatus("Não foi possível criar a tarefa: " + error.message); return; }
+    const { error: dErr } = await sb.from("planner_backlog").delete().eq("id", it.id);
+    bkTransform = null;
+    bkSelected = null;
+    await loadEvents();
+    await loadBacklog();
+    setStatus(dErr ? "Tarefa criada, mas não saiu do backlog" : "Tarefa ativa criada para " + bkFmtDate(when.date));
+  }
+  async function bkDelete(it) {
+    const { error } = await sb.from("planner_backlog").delete().eq("id", it.id);
+    if (error) { setStatus("Não foi possível excluir: " + error.message); return; }
+    bkSelected = null;
+    await loadBacklog();
+    setStatus("Item excluído");
+  }
+  function bkResetForm() {
+    bkEditing = null;
+    $("bk-form").reset();
+    $("bk-level").hidden = true;
+    $("bk-submit").textContent = "Adicionar ao backlog";
+    $("bk-cancel").hidden = true;
+    fillBkSubs("");
+  }
+  function bkStartEdit(it) {
+    bkEditing = it.id;
+    $("bk-title").value = it.title;
+    $("bk-date").value = it.backlog_date || "";
+    $("bk-start").value = it.start_time ? it.start_time.slice(0, 5) : "";
+    $("bk-end").value = it.end_time ? it.end_time.slice(0, 5) : "";
+    $("bk-category").value = it.category_id || "";
+    fillBkSubs(it.subcategory_id || "");
+    $("bk-kind").value = it.kind || "tarefa";
+    $("bk-priority").checked = !!it.is_priority;
+    $("bk-level").hidden = !it.is_priority;
+    $("bk-level").value = it.priority_level || "normal";
+    $("bk-submit").textContent = "Salvar alterações";
+    $("bk-cancel").hidden = false;
+    $("bk-form").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  $("bk-category").addEventListener("change", () => fillBkSubs(""));
+  $("bk-priority").addEventListener("change", () => { $("bk-level").hidden = !$("bk-priority").checked; });
+  $("bk-cancel").addEventListener("click", bkResetForm);
+  $("bk-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = $("bk-title").value.trim();
+    const date = $("bk-date").value || null;
+    const start = hourOnly($("bk-start").value) || null;
+    const end = hourOnly($("bk-end").value) || null;
+    if (!title) { setStatus("Informe o título"); return; }
+    if (end && !start) { setStatus("Informe a hora de início para usar a hora de fim"); return; }
+    if (end && end <= start) { setStatus("O fim deve ser depois do início"); return; }
+    const isPrio = $("bk-priority").checked;
+    const row = {
+      title: title, kind: $("bk-kind").value,
+      category_id: $("bk-category").value || null,
+      subcategory_id: $("bk-subcategory").value || null,
+      is_priority: isPrio, priority_level: isPrio ? $("bk-level").value : null,
+      backlog_date: date, start_time: start, end_time: end
+    };
+    let res;
+    if (bkEditing) {
+      res = await sb.from("planner_backlog").update(row).eq("id", bkEditing);
+    } else {
+      const { data: u } = await sb.auth.getUser();
+      res = await sb.from("planner_backlog").insert(Object.assign({ user_id: u.user.id }, row));
+    }
+    if (res.error) { setStatus("Não foi possível salvar: " + res.error.message); return; }
+    bkResetForm();
+    await loadBacklog();
+    setStatus("Item salvo no backlog");
+  });
+  // Vincula as tarefas do planner que estão em aberto e ainda não estão no backlog
+  $("bk-link-open").addEventListener("click", async () => {
+    setStatus("Vinculando tarefas…");
+    const [ev, days, bl] = await Promise.all([
+      sb.from("planner_events").select("*"),
+      sb.from("planner_days").select("day,data"),
+      sb.from("planner_backlog").select("source_event_id")
+    ]);
+    if (ev.error || days.error) { setStatus("Não foi possível ler as tarefas"); return; }
+    if (bl.error) { setStatus("Rode o SQL do backlog (source_event_id)"); return; }
+    const dayData = {};
+    (days.data || []).forEach((d) => { dayData[d.day] = d.data || {}; });
+    const linked = new Set((bl.data || []).map((x) => String(x.source_event_id)).filter((x) => x !== "null"));
+    const { data: u } = await sb.auth.getUser();
+    const rows = [];
+    (ev.data || []).forEach((e) => {
+      if (linked.has(String(e.id))) return;
+      const day = e.starts_on || todayStr();
+      if (e.repeat_rule === "none") {
+        const d = dayData[day] || {};
+        const finished = (d.timers && d.timers[e.id] && d.timers[e.id].finished) || (d.doneEvents && d.doneEvents[e.id]);
+        if (finished) return;
+      }
+      rows.push({
+        user_id: u.user.id, title: e.title, kind: e.kind || "tarefa",
+        category_id: e.category_id ? String(e.category_id) : null,
+        subcategory_id: e.subcategory_id ? String(e.subcategory_id) : null,
+        is_priority: !!e.is_priority, priority_level: e.priority_level || null,
+        backlog_date: day, start_time: e.start_time, end_time: e.end_time || null,
+        source_event_id: String(e.id)
+      });
+    });
+    if (!rows.length) { setStatus("Nenhuma tarefa em aberto para vincular"); return; }
+    const { error } = await sb.from("planner_backlog").insert(rows);
+    if (error) { setStatus("Não foi possível vincular: " + error.message); return; }
+    await loadBacklog();
+    setStatus(rows.length + " tarefa(s) em aberto vinculada(s) ao backlog");
+  });
+
+  // ---------- Histórico no dashboard: atividades trabalhadas por data e categoria ----------
+  async function renderHistory() {
+    const box = $("dash-history");
+    box.textContent = "Carregando…";
+    const { data, error } = await sb.from("planner_days").select("day,data").order("day", { ascending: false });
+    if (error) { box.textContent = "Não foi possível carregar o histórico."; return; }
+    const now = Date.now(), hoje = todayStr();
+    const days = [];
+    (data || []).forEach((r) => {
+      const d = r.data || {};
+      const timers = d.timers || {}, done = d.doneEvents || {};
+      const tasks = [];
+      new Set([...Object.keys(timers), ...Object.keys(done)]).forEach((id) => {
+        const t = timers[id] || {};
+        const ms = (t.total || 0) + (t.runningSince && r.day === hoje ? now - t.runningSince : 0);
+        if (ms <= 0 && !done[id]) return;
+        const ev = events.find((x) => String(x.id) === String(id));
+        tasks.push({ title: ev ? ev.title : "Tarefa removida", cat: ev ? catById(ev.category_id) : null, ms: ms, done: !!done[id] });
+      });
+      if (tasks.length) days.push({ day: r.day, tasks: tasks });
+    });
+    box.textContent = "";
+    if (!days.length) { box.textContent = "Nenhuma atividade registrada ainda."; return; }
+    days.forEach((dy, idx) => {
+      const det = document.createElement("details");
+      det.className = "hist-day";
+      if (idx === 0) det.open = true;
+      const sum = document.createElement("summary");
+      const total = dy.tasks.reduce((s, t) => s + t.ms, 0);
+      sum.textContent = bkFmtDate(dy.day) + " · " + fmtHM(total);
+      det.append(sum);
+      const groups = new Map();
+      dy.tasks.forEach((t) => {
+        const key = t.cat ? t.cat.id : "none";
+        if (!groups.has(key)) groups.set(key, { name: t.cat ? t.cat.name : "Sem categoria", color: t.cat ? t.cat.color : "#7f8c8d", tasks: [] });
+        groups.get(key).tasks.push(t);
+      });
+      groups.forEach((g) => {
+        const gh = document.createElement("div");
+        gh.className = "hist-cat";
+        const dot = document.createElement("i");
+        dot.className = "hist-dot";
+        dot.style.background = g.color;
+        const name = document.createElement("strong");
+        name.textContent = g.name + " · " + fmtHM(g.tasks.reduce((s, t) => s + t.ms, 0));
+        gh.append(dot, name);
+        det.append(gh);
+        g.tasks.forEach((t) => {
+          const line = document.createElement("div");
+          line.className = "hist-task" + (t.done ? " done" : "");
+          line.textContent = t.title + " — " + fmtHM(t.ms) + (t.done ? " ✓" : "");
+          det.append(line);
+        });
+      });
+      box.append(det);
+    });
+  }
+
   let openPanels = [];
   try { openPanels = JSON.parse(localStorage.getItem("planner-panels") || "[]"); } catch (e) {}
   function applyPanels() {
@@ -1460,6 +1835,7 @@ input[type="email"], input[type="text"], input[type="date"], input[type="time"],
       loadSubcats();
       loadEvents();
       loadDay(currentDay);
+      loadBacklog();
     } else {
       showApp(false);
     }
