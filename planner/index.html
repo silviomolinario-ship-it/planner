@@ -411,6 +411,13 @@ html.embedded .panel-menu { display: none; }
 html.embedded #app { margin-left: 0; padding: 16px 20px; }
 html.embedded #cats-screen, html.embedded #dash-screen { padding: 16px 20px; }
 html.embedded a[href="../"] { display: none; }
+
+/* Celular/iPad: campos com 16px evitam zoom automático no iPhone */
+@media (max-width: 900px) {
+  html.embedded #app { padding: 12px; }
+  html.embedded #cats-screen, html.embedded #dash-screen { padding: 12px; }
+  html.embedded input, html.embedded select, html.embedded textarea { font-size: 16px; }
+}
 </style>
 
 <main>
