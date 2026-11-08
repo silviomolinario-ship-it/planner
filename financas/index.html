@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Finanças</title>
+<script>if (window.self !== window.top) document.documentElement.classList.add("embedded");</script>
 <style>
 :root {
   --bg: #f5f7fa; --card: #ffffff; --ink: #202938; --muted: #697586; --line: #dde2ea;
@@ -163,6 +164,11 @@ input, select { border-radius: 10px; }
   .nav::before { display: none; }
   .nav button { width: auto; white-space: nowrap; }
 }
+
+/* Dentro do menu principal (iframe): esconde o menu próprio e o link de volta */
+html.embedded .nav { display: none; }
+html.embedded #app { margin-left: 0; padding: 16px 20px; }
+html.embedded .back { display: none; }
 </style>
 </head>
 <body>
@@ -1389,6 +1395,22 @@ input, select { border-radius: 10px; }
   });
   sb.auth.getSession().then(({ data }) => { if (!data.session) showApp(false); });
 })();
+
+  // ---------- Roteamento vindo do menu principal ----------
+  function finRoute(name) {
+    name = (name || "").replace(/^#/, "");
+    const map = { pagar: ["contas", "pagar"], receber: ["contas", "receber"], caixa: ["caixa"], mov: ["mov"], fluxo: ["fluxo"], mensal: ["mensal"] };
+    const m = map[name];
+    if (!m) return;
+    view = m[0];
+    if (m[1]) tab = m[1];
+    render();
+  }
+  window.addEventListener("hashchange", () => finRoute(location.hash));
+  window.addEventListener("message", (e) => {
+    if (e.origin === location.origin && e.data && typeof e.data.route === "string") finRoute(e.data.route);
+  });
+  if (location.hash) finRoute(location.hash);
 </script>
 </body>
 </html>
