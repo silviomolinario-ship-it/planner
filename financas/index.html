@@ -163,6 +163,11 @@ input, select { border-radius: 10px; }
   .nav::before { display: none; }
   .nav button { width: auto; white-space: nowrap; }
 }
+
+/* Esconder/mostrar o menu lateral (preferência guardada no aparelho) */
+#menu-toggle { min-height: 40px; white-space: nowrap; }
+body.menu-hidden .panel-menu, body.menu-hidden .nav { display: none !important; }
+body.menu-hidden #app { margin-left: 0 !important; }
 </style>
 </head>
 <body>
@@ -180,6 +185,7 @@ input, select { border-radius: 10px; }
   <section id="app" class="wrap" hidden>
     <header class="top">
       <a class="back" href="../">‹ Início</a>
+      <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <h1>Finanças</h1>
       <input id="month" type="month" aria-label="Mês" style="width:auto">
       <button id="logout" type="button">Sair</button>
@@ -1388,6 +1394,22 @@ input, select { border-radius: 10px; }
     if (session) { showApp(true); load(); } else { showApp(false); }
   });
   sb.auth.getSession().then(({ data }) => { if (!data.session) showApp(false); });
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById("menu-toggle");
+  if (!b) return;
+  function set(hide) {
+    document.body.classList.toggle("menu-hidden", hide);
+    b.setAttribute("aria-expanded", String(!hide));
+    b.textContent = hide ? "☰ Mostrar menu" : "☰ Esconder menu";
+    try { localStorage.setItem("menu-hidden", hide ? "1" : "0"); } catch (e) {}
+  }
+  var saved = false;
+  try { saved = localStorage.getItem("menu-hidden") === "1"; } catch (e) {}
+  set(saved);
+  b.addEventListener("click", function () { set(!document.body.classList.contains("menu-hidden")); });
 })();
 </script>
 </body>
