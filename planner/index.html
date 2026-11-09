@@ -1,6 +1,5 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Planner Diário</title>
-<script>if (window.self !== window.top) document.documentElement.classList.add("embedded");</script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap">
 <style>
 /* Layout: cabeçalho com data, grade de horas à esquerda, cartões à direita. */
@@ -404,19 +403,6 @@ input, select { border-radius: 10px; }
   }
   .panel-menu::before { display: none; }
   .panel-menu button { width: auto; white-space: nowrap; }
-}
-
-/* Dentro do menu principal (iframe): esconde o menu próprio e o link de volta */
-html.embedded .panel-menu { display: none; }
-html.embedded #app { margin-left: 0; padding: 16px 20px; }
-html.embedded #cats-screen, html.embedded #dash-screen { padding: 16px 20px; }
-html.embedded a[href="../"] { display: none; }
-
-/* Celular/iPad: campos com 16px evitam zoom automático no iPhone */
-@media (max-width: 900px) {
-  html.embedded #app { padding: 12px; }
-  html.embedded #cats-screen, html.embedded #dash-screen { padding: 12px; }
-  html.embedded input, html.embedded select, html.embedded textarea { font-size: 16px; }
 }
 </style>
 
@@ -2127,20 +2113,4 @@ html.embedded a[href="../"] { display: none; }
     if (!data.session) showApp(false);
   });
 })();
-
-  // ---------- Roteamento vindo do menu principal ----------
-  function plannerRoute(name) {
-    name = (name || "").replace(/^#/, "");
-    if (name === "dashboard") { if ($("dash-screen").hidden) $("open-dash").click(); return; }
-    if (!$("dash-screen").hidden) $("dash-back").click();
-    if (!$("cats-screen").hidden) $("cats-back").click();
-    openPanels = (name === "agenda" || !name) ? [] : [name];
-    try { localStorage.setItem("planner-panels", JSON.stringify(openPanels)); } catch (e) {}
-    applyPanels();
-  }
-  window.addEventListener("hashchange", () => plannerRoute(location.hash));
-  window.addEventListener("message", (e) => {
-    if (e.origin === location.origin && e.data && typeof e.data.route === "string") plannerRoute(e.data.route);
-  });
-  if (location.hash) plannerRoute(location.hash);
 </script>

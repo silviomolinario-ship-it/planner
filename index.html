@@ -3,198 +3,34 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Meu Painel</title>
+<title>Início</title>
 <style>
-html, body { height: 100%; margin: 0; }
+:root { --bg: #f5f7fa; --card: #ffffff; --ink: #202938; --muted: #697586; --line: #dde2ea; --blue: #315eaa; --green: #15966a; }
+* { box-sizing: border-box; }
 body {
-  display: flex; background: #f3f5fb; color: #1c2540; overflow: hidden;
+  margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding: 32px 16px;
 }
-.side {
-  flex: 0 0 240px; width: 240px; box-sizing: border-box; padding: 22px 14px; overflow-y: auto;
-  background: linear-gradient(180deg, #121b35 0%, #0d1530 100%); color: #aab4cc;
-  padding-left: max(14px, env(safe-area-inset-left, 0px));
+h1 { font-size: 22px; margin: 0 auto 16px; max-width: 720px; }
+.hub { max-width: 720px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.tile {
+  display: grid; gap: 8px; align-content: start; min-height: 160px; padding: 28px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+  color: var(--ink); text-decoration: none;
 }
-.brand { color: #fff; font-weight: 800; font-size: 20px; padding: 6px 10px 18px; }
-.group { margin-bottom: 4px; }
-.grp-h {
-  width: 100%; text-align: left; background: none; border: none; cursor: pointer;
-  color: #fff; font: inherit; font-weight: 800; font-size: 13px; letter-spacing: .06em; text-transform: uppercase;
-  padding: 12px 10px 6px; display: flex; justify-content: space-between; align-items: center;
-}
-.grp-h::after { content: "▾"; color: #7f8aa6; font-size: 12px; }
-.group:not(.open) .grp-h::after { content: "▸"; }
-.subs { display: grid; gap: 2px; }
-.group:not(.open) .subs { display: none; }
-.sub {
-  display: block; color: #aab4cc; text-decoration: none; font-weight: 600;
-  padding: 10px 12px 10px 22px; border-radius: 10px; position: relative;
-}
-.sub:hover { background: rgba(255,255,255,.06); color: #fff; }
-.sub[aria-current="true"] { background: #1f2c52; color: #fff; font-weight: 700; }
-.sub[aria-current="true"]::after {
-  content: ""; position: absolute; right: 12px; top: 50%; width: 8px; height: 8px; margin-top: -4px;
-  border-radius: 50%; background: #a78bfa;
-}
-.content { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100%; }
-.bar {
-  flex: 0 0 auto; display: flex; align-items: center; gap: 12px; box-sizing: border-box;
-  height: 52px; padding: 0 12px; background: #fff; border-bottom: 1px solid #e3e8f2;
-  padding-left: max(12px, env(safe-area-inset-left, 0px));
-  padding-right: max(12px, env(safe-area-inset-right, 0px));
-}
-.bar-toggle {
-  width: 40px; height: 40px; border-radius: 10px; border: 1px solid #e3e8f2; background: #fff;
-  font-size: 20px; line-height: 1; cursor: pointer; color: #1c2540; flex: 0 0 auto;
-}
-.bar-title { font-weight: 800; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-iframe { flex: 1 1 auto; min-height: 0; width: 100%; border: 0; background: transparent; }
-.scrim { display: none; }
-
-/* Menu escondido (computador/iPad na paisagem) */
-body.menu-hidden .side { display: none; }
-
-/* Telas menores (iPad em retrato e iPhone): menu vira gaveta */
-@media (max-width: 899px) {
-  .side {
-    position: fixed; top: 0; bottom: 0; left: 0; z-index: 30; width: min(290px, 84vw);
-    transform: translateX(-102%); transition: transform .22s ease;
-    box-shadow: 4px 0 24px rgba(0,0,0,.25);
-    padding-top: max(22px, env(safe-area-inset-top, 0px));
-  }
-  body.menu-open .side { transform: none; }
-  body.menu-open .scrim { display: block; position: fixed; inset: 0; background: rgba(10,14,28,.45); z-index: 20; }
-  body.menu-hidden .side { display: block; }
-  .bar { height: calc(52px + env(safe-area-inset-top, 0px)); padding-top: env(safe-area-inset-top, 0px); }
-}
+.tile strong { font-size: 20px; }
+.tile span { color: var(--muted); font-size: 15px; }
+.tile.planner { border-top: 6px solid var(--green); }
+.tile.fin { border-top: 6px solid var(--blue); }
+.tile:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
 </style>
 </head>
 <body>
-<nav class="side" aria-label="Menu principal">
-  <div class="brand">Meu Painel</div>
-
-  <div class="group open" data-group="planner">
-    <button class="grp-h" type="button" aria-expanded="true">Planner</button>
-    <div class="subs">
-      <a class="sub" data-route="planner/agenda" data-group="planner" href="#planner/agenda">Agenda</a>
-      <a class="sub" data-route="planner/atividades" data-group="planner" href="#planner/atividades">Atividades</a>
-      <a class="sub" data-route="planner/backlog" data-group="planner" href="#planner/backlog">Backlog</a>
-      <a class="sub" data-route="planner/notas" data-group="planner" href="#planner/notas">Notas</a>
-      <a class="sub" data-route="planner/lembretes" data-group="planner" href="#planner/lembretes">Lembretes</a>
-      <a class="sub" data-route="planner/dashboard" data-group="planner" href="#planner/dashboard">Dashboard</a>
-    </div>
-  </div>
-
-  <div class="group" data-group="fin">
-    <button class="grp-h" type="button" aria-expanded="false">Financeiro</button>
-    <div class="subs">
-      <a class="sub" data-route="fin/pagar" data-group="fin" href="#fin/pagar">A pagar</a>
-      <a class="sub" data-route="fin/receber" data-group="fin" href="#fin/receber">A receber</a>
-      <a class="sub" data-route="fin/caixa" data-group="fin" href="#fin/caixa">Caixa</a>
-      <a class="sub" data-route="fin/movimentos" data-group="fin" href="#fin/movimentos">Movimentos</a>
-      <a class="sub" data-route="fin/fluxo" data-group="fin" href="#fin/fluxo">Fluxo de caixa</a>
-      <a class="sub" data-route="fin/planilha" data-group="fin" href="#fin/planilha">Planilha do mês</a>
-    </div>
-  </div>
-
-  <div class="group" data-group="dash">
-    <button class="grp-h" type="button" aria-expanded="false">Dashboard</button>
-    <div class="subs">
-      <a class="sub" data-route="dashboard" data-group="dash" href="#dashboard">Tempo por atividade</a>
-    </div>
-  </div>
+<h1>Início</h1>
+<nav class="hub">
+  <a class="tile planner" href="planner/"><strong>Planner</strong><span>Agenda, tarefas, notas e tempo por atividade</span></a>
+  <a class="tile fin" href="financas/"><strong>Finanças</strong><span>Contas a pagar e a receber</span></a>
 </nav>
-
-<div class="scrim" id="scrim"></div>
-<main class="content">
-  <header class="bar">
-    <button class="bar-toggle" id="menu-toggle" type="button" aria-label="Mostrar ou esconder o menu" aria-expanded="true">☰</button>
-    <span class="bar-title" id="bar-title"></span>
-  </header>
-  <iframe id="frame" title="Conteúdo"></iframe>
-</main>
-
-<script>
-(function () {
-  const ROUTES = {
-    "planner/agenda":     ["planner/", "agenda"],
-    "planner/atividades": ["planner/", "tarefas"],
-    "planner/backlog":    ["planner/", "backlog"],
-    "planner/notas":      ["planner/", "notas"],
-    "planner/lembretes":  ["planner/", "lembretes"],
-    "planner/dashboard":  ["planner/", "dashboard"],
-    "dashboard":          ["planner/", "dashboard"],
-    "fin/pagar":          ["financas/", "pagar"],
-    "fin/receber":        ["financas/", "receber"],
-    "fin/caixa":          ["financas/", "caixa"],
-    "fin/movimentos":     ["financas/", "mov"],
-    "fin/fluxo":          ["financas/", "fluxo"],
-    "fin/planilha":       ["financas/", "mensal"]
-  };
-  const frame = document.getElementById("frame");
-  const body = document.body;
-  const small = window.matchMedia("(max-width: 899px)");
-
-  // Esconder/mostrar menu. Em telas grandes: esconde o menu; em iPad/iPhone: abre/fecha a gaveta.
-  let hidden = false;
-  try { hidden = localStorage.getItem("menu-hidden") === "1"; } catch (e) {}
-  body.classList.toggle("menu-hidden", hidden && !small.matches);
-  function setMenu(open) {
-    if (small.matches) {
-      body.classList.toggle("menu-open", open);
-    } else {
-      body.classList.toggle("menu-hidden", !open);
-      try { localStorage.setItem("menu-hidden", open ? "0" : "1"); } catch (e) {}
-    }
-    document.getElementById("menu-toggle").setAttribute("aria-expanded", String(open));
-  }
-  document.getElementById("menu-toggle").addEventListener("click", () => {
-    const open = small.matches ? !body.classList.contains("menu-open") : body.classList.contains("menu-hidden");
-    setMenu(open);
-  });
-  document.getElementById("scrim").addEventListener("click", () => setMenu(false));
-  small.addEventListener("change", () => {
-    body.classList.remove("menu-open");
-    body.classList.toggle("menu-hidden", false);
-  });
-
-  // Grupos: abre/fecha
-  document.querySelectorAll(".grp-h").forEach((b) => {
-    b.addEventListener("click", () => {
-      const g = b.parentElement;
-      const open = !g.classList.contains("open");
-      g.classList.toggle("open", open);
-      b.setAttribute("aria-expanded", String(open));
-    });
-  });
-
-  function go() {
-    let route = (location.hash || "").replace(/^#/, "");
-    if (!ROUTES[route]) route = "planner/agenda";
-    const [base, panel] = ROUTES[route];
-    const item = document.querySelector('.sub[data-route="' + route + '"]');
-    document.querySelectorAll(".sub").forEach((a) => {
-      a.setAttribute("aria-current", String(a.dataset.route === route));
-    });
-    document.querySelectorAll(".group").forEach((g) => {
-      const open = g.dataset.group === item.dataset.group;
-      g.classList.toggle("open", open);
-      g.querySelector(".grp-h").setAttribute("aria-expanded", String(open));
-    });
-    document.getElementById("bar-title").textContent =
-      item.parentElement.parentElement.querySelector(".grp-h").textContent + " · " + item.textContent;
-    body.classList.remove("menu-open");
-    if (frame.dataset.base !== base) {
-      frame.dataset.base = base;
-      frame.src = base + "?embed=1#" + panel;
-    } else {
-      frame.contentWindow.postMessage({ route: panel }, location.origin);
-    }
-  }
-  window.addEventListener("hashchange", go);
-  if (!location.hash) location.hash = "#planner/agenda";
-  go();
-})();
-</script>
 </body>
 </html>
