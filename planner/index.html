@@ -646,7 +646,7 @@ label { font-size: 13px; font-weight: 700; color: var(--muted); }
     background: rgba(12,20,49,.94); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
     border-radius: 0 0 18px 18px; -webkit-overflow-scrolling: touch; scrollbar-width: none;
   }
-  .panel-menu::-webkit-scrollbar { display: none; }
+  .panel-menu.panel-menu::-webkit-scrollbar { display: none; }
   .panel-menu::before { display: none; }
   .panel-menu button { width: auto; flex: 0 0 auto; white-space: nowrap; min-height: 40px; border-radius: 999px; padding: 8px 14px; font-size: 14px; }
   .panel-menu button[aria-pressed="true"] { background: #fff; color: var(--ink); }
@@ -856,6 +856,48 @@ input[type="checkbox"], input[type="radio"] { background: initial; }
   input, select, textarea { background: rgba(255,255,255,.07); }
   .modal-box { background: linear-gradient(180deg, rgba(28,36,72,.98), rgba(14,18,42,.98)); }
 }
+
+/* =====================================================================
+   MENU SUPERIOR: barra horizontal de botões (todas as larguras)
+   ===================================================================== */
+#app { margin-left: 0 !important; max-width: 1280px; display: flex; flex-direction: column; }
+#app > .top { order: 1; }
+#app > .panel-menu { order: 0; }
+.panel-menu,
+.panel-menu:not([hidden]) {
+  position: relative; top: auto; left: auto; bottom: auto; z-index: 5;
+  width: auto; height: auto; margin: 0 0 14px; padding: 8px;
+  flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px;
+  overflow: visible; border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+  border: 1px solid rgba(255,255,255,.14);
+  -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 22px 46px rgba(0,0,0,.36), inset 0 1px 0 rgba(255,255,255,.10);
+  scrollbar-width: auto;
+}
+.panel-menu::before {
+  display: inline-flex; align-items: center; padding: 0 12px 0 10px; margin-right: 4px;
+  font-size: 16px; font-weight: 800; color: #fff; letter-spacing: -.01em; align-self: center;
+}
+.panel-menu button,
+.panel-menu button:not([aria-pressed]) {
+  width: auto; flex: 0 0 auto; min-height: 40px; padding: 8px 16px; margin: 0;
+  border-radius: 14px; font-size: 14px; font-weight: 700; white-space: nowrap; text-align: center;
+  background: rgba(255,255,255,.07); color: #c3cde3; border: 1px solid rgba(255,255,255,.10); box-shadow: none;
+}
+.panel-menu button:hover { background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.2); }
+.panel-menu button[aria-pressed="true"] {
+  background: linear-gradient(135deg, #2f8dff 0%, #22c3f5 100%); color: #fff; border-color: transparent;
+  box-shadow: 0 10px 24px rgba(47,155,255,.32), inset 0 1px 0 rgba(255,255,255,.25);
+}
+.panel-menu button[aria-pressed="true"]::after { display: none; }
+@media (max-width: 599px) {
+  .panel-menu.panel-menu { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; margin: 0 0 12px; }
+  .panel-menu::-webkit-scrollbar { display: none; }
+  .panel-menu::before { display: none; }
+  .panel-menu button { font-size: 13px; padding: 8px 14px; min-height: 38px; }
+}
+body.menu-hidden .panel-menu { display: none !important; }
 </style>
 
 <main>
