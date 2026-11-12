@@ -965,6 +965,16 @@ html[data-device="iphone"] .hist-table { table-layout: auto; min-width: 0; max-w
 html[data-device="iphone"] .hist-table tr, html[data-device="iphone"] .hist-table td { min-width: 0; max-width: 100%; box-sizing: border-box; white-space: normal !important; }
 html[data-device="iphone"] .hist-table td { overflow-wrap: anywhere; word-break: normal; }
 html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
+
+/* Link para o Financeiro dentro do menu (mesmo visual dos botões) */
+.panel-menu a.menu-link {
+  display: inline-flex; align-items: center; gap: 8px; width: auto; flex: 0 0 auto; min-height: 40px; padding: 8px 16px;
+  border-radius: 14px; font-size: 14px; font-weight: 700; white-space: nowrap; text-decoration: none; text-align: center;
+  background: rgba(255,255,255,.07); color: #c3cde3; border: 1px solid rgba(255,255,255,.10);
+}
+.panel-menu a.menu-link:hover { background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.2); }
+.panel-menu a.menu-link .ico { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 599px) { .panel-menu a.menu-link { font-size: 13px; padding: 8px 14px; min-height: 38px; } }
 </style>
 
 <main>
@@ -1004,6 +1014,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       <button type="button" data-toggle="notas" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg><span>Notas</span></button>
       <button type="button" data-toggle="backlog" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Backlog</span></button>
       <button id="open-dash" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>Dashboard</span></button>
+      <a class="menu-link" href="../financas/"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/><path d="M16 14.5h2"/></svg><span>Financeiro</span></a>
     </nav>
 
     <div class="grid">
