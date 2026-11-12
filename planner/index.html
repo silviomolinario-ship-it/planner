@@ -1,3 +1,9 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Planner Diário</title>
 <script>if (window.self !== window.top) document.documentElement.classList.add("embedded");</script>
@@ -975,6 +981,31 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
 .panel-menu a.menu-link:hover { background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.2); }
 .panel-menu a.menu-link .ico { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 @media (max-width: 599px) { .panel-menu a.menu-link { font-size: 13px; padding: 8px 14px; min-height: 38px; } }
+
+/* =====================================================================
+   MENU EM CORTINA (iPhone): um botão abre os itens descendo do topo
+   ===================================================================== */
+.curtain-btn { display: none; }
+@media (max-width: 599px), html[data-device="iphone"] {
+  .panel-menu, .panel-menu.panel-menu { flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 10px; overflow: visible; }
+  .panel-menu::before { display: inline-flex !important; font-size: 17px; padding: 0 4px; margin: 0; }
+  .curtain-btn {
+    display: inline-flex; align-items: center; gap: 8px; margin-left: auto; min-height: 42px; padding: 8px 16px;
+    border-radius: 14px; font-size: 15px; font-weight: 800;
+    background: linear-gradient(135deg, #2f8dff 0%, #22c3f5 100%); color: #fff; border: none;
+    box-shadow: 0 10px 24px rgba(47,155,255,.32);
+  }
+  .curtain-btn[aria-expanded="true"] { background: rgba(255,255,255,.14); box-shadow: none; border: 1px solid rgba(255,255,255,.18); }
+  .panel-menu:not(.open) > button:not(.curtain-btn), .panel-menu:not(.open) > a.menu-link { display: none !important; }
+  .panel-menu.open > button:not(.curtain-btn), .panel-menu.open > a.menu-link {
+    display: inline-flex !important; flex: 0 0 calc(50% - 4px); width: calc(50% - 4px); justify-content: flex-start;
+    min-height: 46px; font-size: 15px; animation: curtainIn .26s ease both;
+  }
+  .panel-menu.open > button:nth-of-type(n) { }
+  .panel-menu.open { padding-bottom: 12px; }
+  .panel-menu.open > .curtain-btn { flex: 0 0 auto; }
+}
+@keyframes curtainIn { from { opacity: 0; transform: translateY(-10px) scale(.98); } to { opacity: 1; transform: none; } }
 </style>
 
 <main>
@@ -988,7 +1019,9 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     <p id="auth-msg" role="status"></p>
   </section>
 
-  <section id="app" hidden>
+  </head>
+<body>
+<section id="app" hidden>
     <header class="top">
       <button id="prev" type="button" aria-label="Dia anterior">‹</button>
       <label class="date-field">
@@ -1007,7 +1040,8 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       <button id="logout" type="button">Sair</button>
     </header>
 
-    <nav class="panel-menu" aria-label="Painéis">
+    <nav class="panel-menu" id="planner-menu-items" aria-label="Painéis">
+      <button type="button" class="curtain-btn" id="curtain-planner" aria-expanded="false" aria-controls="planner-menu-items">☰ Menu</button>
       <button id="show-agenda" type="button" aria-pressed="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Agenda</span></button>
       <button type="button" data-toggle="lembretes" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span>Lembretes</span></button>
       <button type="button" data-toggle="tarefas" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Tarefas</span></button>
@@ -2761,3 +2795,22 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
   window.addEventListener("resize", paint);
 })();
 </script>
+<script>
+(function () {
+  var m = document.querySelector(".panel-menu");
+  if (!m) return;
+  var b = m.querySelector(".curtain-btn");
+  if (!b) return;
+  function set(open) {
+    m.classList.toggle("open", open);
+    b.setAttribute("aria-expanded", String(open));
+    b.textContent = open ? "✕ Fechar" : "☰ Menu";
+  }
+  b.addEventListener("click", function () { set(!m.classList.contains("open")); });
+  m.addEventListener("click", function (e) {
+    if (e.target !== b && e.target.closest("button, a")) set(false);
+  });
+})();
+</script>
+</body>
+</html>
