@@ -898,6 +898,12 @@ input[type="checkbox"], input[type="radio"] { background: initial; }
   .panel-menu button { font-size: 13px; padding: 8px 14px; min-height: 38px; }
 }
 body.menu-hidden .panel-menu { display: none !important; }
+
+/* Ícones nos botões do menu */
+.panel-menu button { display: inline-flex; align-items: center; gap: 8px; }
+.panel-menu .ico { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 599px) { .panel-menu button { gap: 6px; } .panel-menu .ico { width: 16px; height: 16px; } }
+#device-info { font-variant-numeric: tabular-nums; }
 </style>
 
 <main>
@@ -923,6 +929,7 @@ body.menu-hidden .panel-menu { display: none !important; }
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
       <span class="status" title="versão desta página">v.2026-11-05-2035</span>
+      <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" style="align-self:center;font-weight:700">‹ Início</a>
       <button id="open-cats" type="button">Categorias</button>
@@ -930,12 +937,12 @@ body.menu-hidden .panel-menu { display: none !important; }
     </header>
 
     <nav class="panel-menu" aria-label="Painéis">
-      <button id="show-agenda" type="button" aria-pressed="true">Agenda</button>
-      <button type="button" data-toggle="lembretes" aria-pressed="false">Lembretes</button>
-      <button type="button" data-toggle="tarefas" aria-pressed="false">Tarefas</button>
-      <button type="button" data-toggle="notas" aria-pressed="false">Notas</button>
-      <button type="button" data-toggle="backlog" aria-pressed="false">Backlog</button>
-      <button id="open-dash" type="button">Dashboard</button>
+      <button id="show-agenda" type="button" aria-pressed="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Agenda</span></button>
+      <button type="button" data-toggle="lembretes" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span>Lembretes</span></button>
+      <button type="button" data-toggle="tarefas" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Tarefas</span></button>
+      <button type="button" data-toggle="notas" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg><span>Notas</span></button>
+      <button type="button" data-toggle="backlog" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Backlog</span></button>
+      <button id="open-dash" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>Dashboard</span></button>
     </nav>
 
     <div class="grid">
@@ -2641,5 +2648,31 @@ body.menu-hidden .panel-menu { display: none !important; }
   try { saved = localStorage.getItem("menu-hidden") === "1"; } catch (e) {}
   set(saved);
   b.addEventListener("click", function () { set(!document.body.classList.contains("menu-hidden")); });
+})();
+</script>
+<script>
+(function () {
+  var el = document.getElementById("device-info");
+  if (!el) return;
+  function info() {
+    var ua = navigator.userAgent || "", touch = navigator.maxTouchPoints || 0, dev, br, standalone;
+    if (/iPhone/.test(ua)) dev = "iPhone";
+    else if (/iPad/.test(ua) || (/Macintosh/.test(ua) && touch > 1)) dev = "iPad";
+    else if (/Android/.test(ua)) dev = /Mobile/.test(ua) ? "Celular Android" : "Tablet Android";
+    else if (/Macintosh/.test(ua)) dev = "Mac";
+    else if (/Windows/.test(ua)) dev = "Windows";
+    else if (/Linux/.test(ua)) dev = "Linux";
+    else dev = "Dispositivo desconhecido";
+    if (/CriOS|Chrome\//.test(ua) && !/Edg\//.test(ua)) br = "Chrome";
+    else if (/Edg\//.test(ua)) br = "Edge";
+    else if (/FxiOS|Firefox\//.test(ua)) br = "Firefox";
+    else if (/Safari\//.test(ua)) br = "Safari";
+    else br = "navegador";
+    standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+    return dev + " · " + br + (standalone ? " · app instalado" : "") + " · " + window.innerWidth + "×" + window.innerHeight;
+  }
+  function paint() { try { el.textContent = info(); } catch (e) { el.textContent = ""; } }
+  paint();
+  window.addEventListener("resize", paint);
 })();
 </script>
