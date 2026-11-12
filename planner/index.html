@@ -904,6 +904,67 @@ body.menu-hidden .panel-menu { display: none !important; }
 .panel-menu .ico { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 @media (max-width: 599px) { .panel-menu button { gap: 6px; } .panel-menu .ico { width: 16px; height: 16px; } }
 #device-info { font-variant-numeric: tabular-nums; }
+
+/* =====================================================================
+   DASHBOARD POR DISPOSITIVO (iPhone, iPad, Mac/PC) - html[data-device]
+   ===================================================================== */
+#dash-screen .dash-grid-note { display: none; }
+
+/* --- Mac / PC: largura total, duas colunas, tabelas densas --- */
+html[data-device="mac"] #dash-screen, html[data-device="windows"] #dash-screen, html[data-device="other"] #dash-screen {
+  max-width: 1320px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 18px; align-items: start;
+}
+html[data-device="mac"] #dash-screen > .top, html[data-device="windows"] #dash-screen > .top, html[data-device="other"] #dash-screen > .top { grid-column: 1 / -1; }
+html[data-device="mac"] #dash-screen > .card:last-child, html[data-device="windows"] #dash-screen > .card:last-child, html[data-device="other"] #dash-screen > .card:last-child { grid-column: 1 / -1; }
+html[data-device="mac"] .hist-table td, html[data-device="windows"] .hist-table td, html[data-device="other"] .hist-table td { font-size: 13px; padding: 10px 12px; white-space: nowrap; }
+html[data-device="mac"] .total, html[data-device="windows"] .total, html[data-device="other"] .total { font-size: 22px; }
+
+/* --- iPad: duas colunas, alvos de toque maiores --- */
+html[data-device="ipad"] #dash-screen {
+  max-width: 1000px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start;
+  padding: 18px 22px 40px;
+}
+html[data-device="ipad"] #dash-screen > .top { grid-column: 1 / -1; }
+html[data-device="ipad"] #dash-screen > .card:last-child { grid-column: 1 / -1; }
+html[data-device="ipad"] #dash-screen select, html[data-device="ipad"] #dash-screen button { min-height: 44px; font-size: 15px; }
+html[data-device="ipad"] .hist-table td, html[data-device="ipad"] .hist-table th { font-size: 13px; padding: 11px 10px; white-space: nowrap; }
+html[data-device="ipad"] .total { font-size: 20px; }
+
+/* --- iPhone: coluna única, tabelas viram cartões empilhados --- */
+html[data-device="iphone"] #dash-screen { padding: 12px 12px 40px; max-width: none; display: block; }
+html[data-device="iphone"] #dash-screen > .top { flex-wrap: wrap; }
+html[data-device="iphone"] #dash-screen select, html[data-device="iphone"] #dash-screen button { min-height: 44px; font-size: 16px; }
+html[data-device="iphone"] #dash-screen .card + .card { margin-top: 12px; }
+html[data-device="iphone"] .hist-wrap, html[data-device="iphone"] #dash-acc, html[data-device="iphone"] #dash-history { overflow: visible; background: none; border: none; }
+html[data-device="iphone"] .hist-table thead { display: none; }
+html[data-device="iphone"] .hist-table, html[data-device="iphone"] .hist-table tbody,
+html[data-device="iphone"] .hist-table tfoot { display: block; width: 100%; }
+html[data-device="iphone"] .hist-table tr {
+  display: block; margin: 0 0 10px; padding: 10px 12px; border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+  border: 1px solid rgba(255,255,255,.12);
+}
+html[data-device="iphone"] .hist-table tr.hist-total { background: rgba(47,155,255,.14); border-color: rgba(47,155,255,.30); }
+html[data-device="iphone"] .hist-table td {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  border: none !important; padding: 5px 0; font-size: 14px; white-space: normal; text-align: right;
+}
+html[data-device="iphone"] .hist-table td:empty { display: none; }
+html[data-device="iphone"] .hist-table td::before {
+  content: attr(data-label); color: var(--muted); font-size: 12px; font-weight: 700; text-align: left; flex: 0 0 auto;
+}
+html[data-device="iphone"] .hist-table td.hist-id { text-align: right; }
+html[data-device="iphone"] .hist-table tr:first-child td:first-child::before { }
+html[data-device="iphone"] .total { font-size: 20px; }
+html[data-device="iphone"] .hist-card { padding: 14px; }
+#dash-screen[hidden] { display: none !important; }
+
+/* Correção iPhone: nada ultrapassa a largura do cartão */
+html[data-device="iphone"] .hist-card, html[data-device="iphone"] .hist-card > div { min-width: 0; max-width: 100%; box-sizing: border-box; }
+html[data-device="iphone"] .hist-table { table-layout: auto; min-width: 0; max-width: 100%; box-sizing: border-box; }
+html[data-device="iphone"] .hist-table tr, html[data-device="iphone"] .hist-table td { min-width: 0; max-width: 100%; box-sizing: border-box; white-space: normal !important; }
+html[data-device="iphone"] .hist-table td { overflow-wrap: anywhere; word-break: normal; }
+html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
 </style>
 
 <main>
@@ -2479,6 +2540,7 @@ body.menu-hidden .panel-menu { display: none !important; }
         vals.forEach((v, i) => {
           const td = document.createElement("td");
           td.textContent = v;
+          td.setAttribute("data-label", cols[i]);
           if (i === 1) td.className = "hist-id";
           tr.append(td);
         });
@@ -2493,7 +2555,7 @@ body.menu-hidden .panel-menu { display: none !important; }
       cellsHist[0] = "Total";
       cellsHist[1] = rows.length + " tarefas";
       cellsHist[13] = fmtHM(totalMs);
-      cellsHist.forEach((v) => { const td = document.createElement("td"); td.textContent = v; trHist.append(td); });
+      cellsHist.forEach((v, i) => { const td = document.createElement("td"); td.textContent = v; td.setAttribute("data-label", cols[i]); trHist.append(td); });
       tfHist.append(trHist);
       table.append(tfHist);
       wrap.append(table);
@@ -2509,7 +2571,8 @@ body.menu-hidden .panel-menu { display: none !important; }
     at.className = "hist-table acc-table";
     const ah = document.createElement("thead");
     const ahr = document.createElement("tr");
-    ["Data", "Concluídas", "Tempo do dia", "Acumulado"].forEach((c) => { const th = document.createElement("th"); th.textContent = c; ahr.append(th); });
+    const accCols = ["Data", "Concluídas", "Tempo do dia", "Acumulado"];
+    accCols.forEach((c) => { const th = document.createElement("th"); th.textContent = c; ahr.append(th); });
     ah.append(ahr);
     at.append(ah);
     const ab = document.createElement("tbody");
@@ -2518,9 +2581,10 @@ body.menu-hidden .panel-menu { display: none !important; }
       const pd = perDay[day];
       acum += pd.ms;
       const tr = document.createElement("tr");
-      [bkFmtDate(day), String(pd.concluidas), fmtHM(pd.ms), fmtHM(acum)].forEach((v) => {
+      [bkFmtDate(day), String(pd.concluidas), fmtHM(pd.ms), fmtHM(acum)].forEach((v, i) => {
         const td = document.createElement("td");
         td.textContent = v;
+        td.setAttribute("data-label", accCols[i]);
         tr.append(td);
       });
       ab.append(tr);
@@ -2531,7 +2595,7 @@ body.menu-hidden .panel-menu { display: none !important; }
     trAcc.className = "hist-total";
     const totConc = dias.reduce((acc, d) => acc + perDay[d].concluidas, 0);
     const totMs = dias.reduce((acc, d) => acc + perDay[d].ms, 0);
-    ["Total", String(totConc), fmtHM(totMs), ""].forEach((v) => { const td = document.createElement("td"); td.textContent = v; trAcc.append(td); });
+    ["Total", String(totConc), fmtHM(totMs), ""].forEach((v, i) => { const td = document.createElement("td"); td.textContent = v; td.setAttribute("data-label", accCols[i]); trAcc.append(td); });
     tfAcc.append(trAcc);
     at.append(tfAcc);
     acc.append(at);
@@ -2672,6 +2736,16 @@ body.menu-hidden .panel-menu { display: none !important; }
     return dev + " · " + br + (standalone ? " · app instalado" : "") + " · " + window.innerWidth + "×" + window.innerHeight;
   }
   function paint() { try { el.textContent = info(); } catch (e) { el.textContent = ""; } }
+  function devKey() {
+    var ua = navigator.userAgent || "", touch = navigator.maxTouchPoints || 0;
+    if (/iPhone|iPod/.test(ua)) return "iphone";
+    if (/iPad/.test(ua) || (/Macintosh/.test(ua) && touch > 1)) return "ipad";
+    if (/Android/.test(ua)) return /Mobile/.test(ua) ? "android-phone" : "android-tablet";
+    if (/Macintosh/.test(ua)) return "mac";
+    if (/Windows/.test(ua)) return "windows";
+    return "other";
+  }
+  document.documentElement.setAttribute("data-device", devKey());
   paint();
   window.addEventListener("resize", paint);
 })();
