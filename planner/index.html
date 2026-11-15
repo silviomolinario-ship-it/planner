@@ -2117,6 +2117,10 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
   }
   $("ev-start").value = nowHour();
   $("ev-startdate").value = todayStr();
+  // Data final acompanha a data inicial escolhida
+  ["input", "change"].forEach((evt) => {
+    $("ev-startdate").addEventListener(evt, () => { $("ev-enddate").value = $("ev-startdate").value; });
+  });
   $("ev-enddate").value = todayStr();
 
   // Filtro da lista de tarefas
