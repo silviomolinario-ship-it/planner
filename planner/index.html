@@ -867,8 +867,8 @@ input[type="checkbox"], input[type="radio"] { background: initial; }
    MENU SUPERIOR: barra horizontal de botões (todas as larguras)
    ===================================================================== */
 #app { margin-left: 0 !important; max-width: 1280px; display: flex; flex-direction: column; }
-#app > .top { order: 1; }
-#app > .panel-menu { order: 0; }
+#app > .top { order: 0; }
+#app > .panel-menu { order: 1; }
 .panel-menu,
 .panel-menu:not([hidden]) {
   position: relative; top: auto; left: auto; bottom: auto; z-index: 5;
@@ -1006,6 +1006,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
   .panel-menu.open > .curtain-btn { flex: 0 0 auto; }
 }
 @keyframes curtainIn { from { opacity: 0; transform: translateY(-10px) scale(.98); } to { opacity: 1; transform: none; } }
+.top .back-link { align-self: center; font-weight: 700; color: #8fd0ff; text-decoration: none; padding: 8px 10px; border-radius: 10px; }
 </style>
 
 <main>
@@ -1035,8 +1036,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       <span class="status" title="versão desta página">v.2026-11-05-2035</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
-      <a href="../" style="align-self:center;font-weight:700">‹ Início</a>
-      <button id="open-cats" type="button">Categorias</button>
+      <a href="../" class="back-link">‹ Início</a>
       <button id="logout" type="button">Sair</button>
     </header>
 
@@ -1048,6 +1048,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       <button type="button" data-toggle="notas" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg><span>Notas</span></button>
       <button type="button" data-toggle="backlog" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Backlog</span></button>
       <button id="open-dash" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>Dashboard</span></button>
+      <button id="open-cats" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span>Categorias</span></button>
       <a class="menu-link" href="../financas/"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/><path d="M16 14.5h2"/></svg><span>Financeiro</span></a>
     </nav>
 
