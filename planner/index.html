@@ -1327,6 +1327,8 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
   let doneEvents = {};
   let taskFilter = "todas";                // filtro da lista: todas | ativas | concluidas
   let timers = {};
+  let movedOut = {};        // ocorrências de tarefas recorrentes migradas PARA FORA deste dia: { [eventId]: true }
+  let movedIn = {};         // ocorrências migradas PARA este dia: { [eventId]: true }
   let categories = [];      // categorias do usuário: { id, name, color }
   const PALETTE = ["#2f8f5b", "#5aa9e6", "#8a5cc2", "#e0a800", "#e67e22", "#c0392b", "#16a085", "#34495e", "#d63384", "#7f8c8d"];
   let newCatColor = PALETTE[0];
@@ -1357,6 +1359,8 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     document.querySelectorAll("[data-check]").forEach((el) => { data.checks[el.dataset.check] = el.checked; });
     data.doneEvents = Object.assign({}, doneEvents);
     data.timers = Object.assign({}, timers);
+    data.movedOut = Object.assign({}, movedOut);
+    data.movedIn = Object.assign({}, movedIn);
     return data;
   }
   function fill(data) {
@@ -1366,6 +1370,8 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     document.querySelectorAll("[data-check]").forEach((el) => { el.checked = !!(d.checks && d.checks[el.dataset.check]); });
     doneEvents = Object.assign({}, d.doneEvents || {});
     timers = Object.assign({}, d.timers || {});
+    movedOut = Object.assign({}, d.movedOut || {});
+    movedIn = Object.assign({}, d.movedIn || {});
     suppressSave = false;
     renderEvents();
   }
@@ -1811,7 +1817,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
 
     // Compromissos: aparecem em todas as horas que o bloco ocupa
     const todays = events
-      .filter((ev) => occurs(ev, currentDay))
+      .filter((ev) => (occurs(ev, currentDay) && !movedOut[ev.id]) || !!movedIn[ev.id])
       .sort((a, b) => a.start_time.localeCompare(b.start_time));
 
     if (!todays.length) {
@@ -1843,26 +1849,46 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
   // Migrar tarefa: move uma tarefa pontual para outro dia (modal com escolha de data)
   let movingEv = null;
   function openMover(ev) {
-    if (ev.repeat_rule && ev.repeat_rule !== "none") {
-      setStatus("Tarefas recorrentes não podem ser migradas de dia");
-      return;
-    }
     movingEv = ev;
-    $("move-name").textContent = ev.title;
+    $("move-name").textContent = ev.title + (ev.repeat_rule && ev.repeat_rule !== "none" ? " (só esta ocorrência)" : "");
     $("move-date").value = shiftDay(currentDay, 1);
     openModal("modal-mover", "Migrar tarefa");
   }
   async function saveMover() {
     if (!movingEv) return;
+    const ev = movingEv;
     const to = $("move-date").value;
+    const from = currentDay;
     if (!to) { setStatus("Escolha a nova data"); return; }
-    if (to === movingEv.starts_on) { closeModal("modal-mover"); return; }
+    if (to === from) { closeModal("modal-mover"); return; }
     const btn = $("move-save");
     btn.disabled = true;
     try {
-      const { error } = await sb.from("planner_events").update({ starts_on: to }).eq("id", movingEv.id);
-      if (error) throw error;
-      movingEv.starts_on = to;
+      const recurring = !!ev.repeat_rule && ev.repeat_rule !== "none";
+      if (!recurring) {
+        // Tarefa pontual: muda a data da própria tarefa
+        const { error } = await sb.from("planner_events").update({ starts_on: to }).eq("id", ev.id);
+        if (error) throw error;
+        ev.starts_on = to;
+      } else {
+        // Recorrente: só esta ocorrência sai deste dia e aparece no dia escolhido
+        movedOut[ev.id] = true;
+        delete movedIn[ev.id];
+        const { data: userData } = await sb.auth.getUser();
+        if (!userData || !userData.user) throw new Error("sem sessão");
+        const { data: row, error: readErr } = await sb.from("planner_days").select("data").eq("day", to).maybeSingle();
+        if (readErr) throw readErr;
+        const dataTo = Object.assign(emptyData(), (row && row.data) || {});
+        dataTo.movedIn = Object.assign({}, dataTo.movedIn || {}, { [ev.id]: true });
+        if (dataTo.movedOut) delete dataTo.movedOut[ev.id];
+        const { error: upErr } = await sb.from("planner_days").upsert(
+          { user_id: userData.user.id, day: to, data: dataTo, updated_at: new Date().toISOString() },
+          { onConflict: "user_id,day" }
+        );
+        if (upErr) throw upErr;
+        writeCache(to, dataTo);
+        await saveDay();
+      }
       closeModal("modal-mover");
       renderEvents();
       setStatus("Tarefa migrada para " + to.split("-").reverse().join("/"));
