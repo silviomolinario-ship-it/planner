@@ -1031,11 +1031,18 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
 <main>
   <section id="auth" hidden>
     <h1>Planner Diário</h1>
-    <p>Digite seu e-mail. Você recebe um código de 8 dígitos para entrar. A mesma conta funciona no iPad, Mac e iPhone.</p>
-    <input id="email" type="email" placeholder="seu@email.com" autocomplete="email">
-    <button id="send-code" class="primary" type="button">Enviar código</button>
-    <input id="code" type="text" inputmode="numeric" maxlength="8" placeholder="Código de 8 dígitos" autocomplete="one-time-code" hidden>
-    <button id="verify" class="primary" type="button" hidden>Entrar</button>
+    <p>Entre com seu e-mail e senha. A mesma conta funciona no iPad, Mac e iPhone.</p>
+    <div id="pass-login">
+      <input id="email" type="email" placeholder="seu@email.com" autocomplete="username">
+      <input id="password" type="password" placeholder="Senha" autocomplete="current-password">
+      <button id="login-pass" class="primary" type="button">Entrar</button>
+      <button id="forgot" class="ghost" type="button">Esqueci a senha / criar senha</button>
+    </div>
+    <div id="pass-new" hidden>
+      <p>Defina sua nova senha.</p>
+      <input id="new-password" type="password" placeholder="Nova senha (mín. 6 caracteres)" autocomplete="new-password">
+      <button id="save-pass" class="primary" type="button">Salvar senha e entrar</button>
+    </div>
     <p id="auth-msg" role="status"></p>
   </section>
 
@@ -2779,29 +2786,40 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
   });
   applyPanels();
 
-  // Login por código de 8 dígitos (sem redirecionamento)
-  const emailEl = $("email"), codeEl = $("code");
+  // Login com e-mail e senha
+  const emailEl = $("email"), passEl = $("password");
   emailEl.value = localStorage.getItem("planner-email") || "";
-
-  $("send-code").addEventListener("click", async () => {
-    const email = emailEl.value.trim();
-    if (!email) { authMsg.textContent = "Digite seu e-mail."; return; }
-    authMsg.textContent = "Enviando código…";
-    const { error } = await sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } });
-    if (error) { authMsg.textContent = "Não foi possível enviar: " + error.message; return; }
+  let recoveryMode = false;
+  function showRecovery(on) {
+    recoveryMode = on;
+    $("pass-login").hidden = on;
+    $("pass-new").hidden = !on;
+  }
+  $("login-pass").addEventListener("click", async () => {
+    const email = emailEl.value.trim(), pass = passEl.value;
+    if (!email || !pass) { authMsg.textContent = "Digite e-mail e senha."; return; }
+    authMsg.textContent = "Entrando…";
+    const { error } = await sb.auth.signInWithPassword({ email: email, password: pass });
+    if (error) { authMsg.textContent = "E-mail ou senha incorretos."; return; }
     localStorage.setItem("planner-email", email);
-    codeEl.hidden = false;
-    $("verify").hidden = false;
-    authMsg.textContent = "Confira seu e-mail e digite o código.";
-    codeEl.focus();
+    authMsg.textContent = "";
   });
-
-  $("verify").addEventListener("click", async () => {
+  passEl.addEventListener("keydown", (e) => { if (e.key === "Enter") $("login-pass").click(); });
+  $("forgot").addEventListener("click", async () => {
     const email = emailEl.value.trim();
-    const token = codeEl.value.trim();
-    if (!token) { authMsg.textContent = "Digite o código."; return; }
-    const { error } = await sb.auth.verifyOtp({ email: email, token: token, type: "email" });
-    if (error) { authMsg.textContent = "Código inválido ou expirado."; }
+    if (!email) { authMsg.textContent = "Digite seu e-mail primeiro."; return; }
+    authMsg.textContent = "Enviando link…";
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.href.split("#")[0] });
+    authMsg.textContent = error ? "Não foi possível enviar: " + error.message : "Enviamos um link para definir sua senha. Abra o link neste aparelho.";
+  });
+  $("save-pass").addEventListener("click", async () => {
+    const np = $("new-password").value;
+    if (np.length < 6) { authMsg.textContent = "A senha precisa ter pelo menos 6 caracteres."; return; }
+    const { error } = await sb.auth.updateUser({ password: np });
+    if (error) { authMsg.textContent = "Não foi possível salvar: " + error.message; return; }
+    showRecovery(false);
+    authMsg.textContent = "";
+    enterApp();
   });
 
   $("logout").addEventListener("click", async () => { await sb.auth.signOut(); });
@@ -2811,17 +2829,18 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     appEl.hidden = !on;
   }
 
+  function enterApp() {
+    showApp(true);
+    loadCategories();
+    loadSubcats();
+    loadEvents();
+    loadDay(currentDay);
+    loadBacklog();
+  }
   sb.auth.onAuthStateChange((event, session) => {
-    if (session) {
-      showApp(true);
-      loadCategories();
-      loadSubcats();
-      loadEvents();
-      loadDay(currentDay);
-      loadBacklog();
-    } else {
-      showApp(false);
-    }
+    if (event === "PASSWORD_RECOVERY") { showRecovery(true); showApp(false); return; }
+    if (recoveryMode) return;
+    if (session) enterApp(); else showApp(false);
   });
 
   sb.auth.getSession().then(({ data }) => {
