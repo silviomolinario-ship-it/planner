@@ -2117,6 +2117,16 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
   }
   $("ev-start").value = nowHour();
   $("ev-startdate").value = todayStr();
+  // Hora final sugerida: 30 minutos depois da hora inicial (pode ser alterada depois)
+  ["input", "change"].forEach((evt) => {
+    $("ev-start").addEventListener(evt, () => {
+      const v = $("ev-start").value;
+      if (!v) return;
+      const [h, m] = v.split(":").map(Number);
+      const total = Math.min(h * 60 + m + 30, 23 * 60 + 59);
+      $("ev-end").value = String(Math.floor(total / 60)).padStart(2, "0") + ":" + String(total % 60).padStart(2, "0");
+    });
+  });
   // Data final acompanha a data inicial escolhida
   ["input", "change"].forEach((evt) => {
     $("ev-startdate").addEventListener(evt, () => { $("ev-enddate").value = $("ev-startdate").value; });
