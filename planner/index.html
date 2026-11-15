@@ -1389,7 +1389,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
   // Um compromisso aparece no dia se o dia cai na regra de repetição a partir da data inicial.
   function occurs(ev, day) {
     if (day < ev.starts_on) return false;
-    if (ev.ends_on && day > ev.ends_on) return false;
+    if (ev.repeat_rule && ev.repeat_rule !== "none" && ev.ends_on && day > ev.ends_on) return false;
     const dow = weekdayOf(day);
     switch (ev.repeat_rule) {
       case "daily": return true;
