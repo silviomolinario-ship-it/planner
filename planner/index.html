@@ -985,11 +985,11 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
 /* =====================================================================
    MENU EM CORTINA (iPhone): um botão abre os itens descendo do topo
    ===================================================================== */
-.curtain-btn { display: none; }
+.panel-menu .curtain-btn { display: none; }
 @media (max-width: 599px), html[data-device="iphone"] {
   .panel-menu, .panel-menu.panel-menu { flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 10px; overflow: visible; }
   .panel-menu::before { display: inline-flex !important; font-size: 17px; padding: 0 4px; margin: 0; }
-  .curtain-btn {
+  .panel-menu .curtain-btn {
     display: inline-flex; align-items: center; gap: 8px; margin-left: auto; min-height: 42px; padding: 8px 16px;
     border-radius: 14px; font-size: 15px; font-weight: 800;
     background: linear-gradient(135deg, #2f8dff 0%, #22c3f5 100%); color: #fff; border: none;
@@ -1007,6 +1007,20 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
 }
 @keyframes curtainIn { from { opacity: 0; transform: translateY(-10px) scale(.98); } to { opacity: 1; transform: none; } }
 .top .back-link { align-self: center; font-weight: 700; color: #8fd0ff; text-decoration: none; padding: 8px 10px; border-radius: 10px; }
+
+/* Menu junto do cabeçalho, no topo */
+#app > .top { position: sticky; top: 8px; z-index: 8; }
+.top .top-menu-row { order: 10; flex: 0 0 100%; min-width: 0; }
+.top .top-menu-row > .panel-menu {
+  margin: 0 !important; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.10);
+  box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+#app > .panel-menu { display: none !important; }
+@media (max-width: 599px), html[data-device="iphone"] {
+  #app > .top { position: relative; top: auto; }
+}
+.panel-menu a.menu-link, .panel-menu > button { align-self: center; height: auto; }
+.top .top-menu-row > .panel-menu { align-items: center; }
 </style>
 
 <main>
@@ -1038,9 +1052,8 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
       <button id="logout" type="button">Sair</button>
-    </header>
-
-    <nav class="panel-menu" id="planner-menu-items" aria-label="Painéis">
+      <div class="top-menu-row">
+      <nav class="panel-menu" id="planner-menu-items" aria-label="Painéis">
       <button type="button" class="curtain-btn" id="curtain-planner" aria-expanded="false" aria-controls="planner-menu-items">☰ Menu</button>
       <button id="show-agenda" type="button" aria-pressed="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Agenda</span></button>
       <button type="button" data-toggle="lembretes" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span>Lembretes</span></button>
@@ -1050,7 +1063,10 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       <button id="open-dash" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>Dashboard</span></button>
       <button id="open-cats" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span>Categorias</span></button>
       <a class="menu-link" href="../financas/"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/><path d="M16 14.5h2"/></svg><span>Financeiro</span></a>
-    </nav>
+      </nav>
+      </div>
+    </header>
+
 
     <div class="grid">
       <section class="hours" aria-label="Horários">
