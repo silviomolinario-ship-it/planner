@@ -2834,7 +2834,13 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     enterApp();
   });
 
-  $("logout").addEventListener("click", async () => { await sb.auth.signOut(); });
+  $("logout").addEventListener("click", async () => {
+    try { await sb.auth.signOut({ scope: "local" }); } catch (e) {}
+    recoveryMode = false;
+    showApp(false);
+    passEl.value = "";
+    authMsg.textContent = "Você saiu. Entre novamente quando quiser.";
+  });
 
   function showApp(on) {
     authEl.hidden = on;

@@ -1554,7 +1554,13 @@ dialog, .modal, .modal-box { background: linear-gradient(180deg, rgba(28,36,72,.
     authMsg.textContent = "";
     enterApp();
   });
-  $("logout").addEventListener("click", async () => { await sb.auth.signOut(); });
+  $("logout").addEventListener("click", async () => {
+    try { await sb.auth.signOut({ scope: "local" }); } catch (e) {}
+    recoveryMode = false;
+    showApp(false);
+    passEl.value = "";
+    authMsg.textContent = "Você saiu. Entre novamente quando quiser.";
+  });
 
   function showApp(on) {
     $("auth").hidden = on;
