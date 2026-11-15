@@ -1090,6 +1090,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
             <button type="button" data-filter="todas" aria-pressed="true">Todas</button>
             <button type="button" data-filter="ativas" aria-pressed="false">Ativas</button>
             <button type="button" data-filter="concluidas" aria-pressed="false">Concluídas</button>
+            <button id="migrate-pending" type="button" title="Leva para o dia atual as tarefas não concluídas do dia anterior">↻ Atualizar pendentes</button>
             <button id="open-task-modal" class="primary" type="button">Nova tarefa</button>
           </div>
           <div id="events-list"></div>
@@ -1797,6 +1798,37 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
 
     layoutItems(items);
   }
+
+  // Atualizar pendentes: tarefas pontuais do dia anterior que não foram concluídas passam para o dia atual
+  async function migratePending() {
+    const btn = document.getElementById("migrate-pending");
+    const to = currentDay;
+    const from = shiftDay(to, -1);
+    if (!confirm("Levar para " + to.split("-").reverse().join("/") + " as tarefas pendentes de " + from.split("-").reverse().join("/") + "?")) return;
+    btn.disabled = true;
+    setStatus("Atualizando pendentes…");
+    try {
+      const { data: dayRow, error: dayErr } = await sb.from("planner_days").select("data").eq("day", from).maybeSingle();
+      if (dayErr) throw dayErr;
+      const doneFrom = (dayRow && dayRow.data && dayRow.data.doneEvents) || {};
+      const pendentes = events.filter((ev) =>
+        ev.starts_on === from && (!ev.repeat_rule || ev.repeat_rule === "none") && !doneFrom[ev.id]);
+      if (!pendentes.length) {
+        setStatus("Nenhuma tarefa pendente de ontem");
+        return;
+      }
+      const { error: updErr } = await sb.from("planner_events").update({ starts_on: to }).in("id", pendentes.map((ev) => ev.id));
+      if (updErr) throw updErr;
+      pendentes.forEach((ev) => { ev.starts_on = to; });
+      renderEvents();
+      setStatus(pendentes.length + (pendentes.length === 1 ? " tarefa levada" : " tarefas levadas") + " para hoje");
+    } catch (e) {
+      setStatus("Não foi possível atualizar: " + (e && e.message ? e.message : "erro de conexão"));
+    } finally {
+      btn.disabled = false;
+    }
+  }
+  document.getElementById("migrate-pending").addEventListener("click", migratePending);
 
   async function loadEvents() {
     try {
