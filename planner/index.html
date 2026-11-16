@@ -1131,7 +1131,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-16-1140</span>
+      <span class="status" title="versão desta página">v.2026-11-16-1200</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -3127,11 +3127,14 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       add("▶ Iniciar", "kb-btn start", () => kbTimer(ev.id, "start"));
       add("✓ Concluir", "kb-btn done", () => kbCheck(ev.id));
     } else if (status === "andamento") {
-      add("❚❚ Pausar", "kb-btn pause", () => kbTimer(ev.id, "pause"));
+      const running = !!(timers[ev.id] && timers[ev.id].runningSince);
+      if (running) add("❚❚ Pausar", "kb-btn pause", () => kbTimer(ev.id, "pause"));
+      else add("▶ Retomar", "kb-btn start", () => kbTimer(ev.id, "resume"));
       add("✓ Concluir", "kb-btn done", () => kbCheck(ev.id));
     } else {
       add("↺ Reabrir", "kb-btn", () => kbCheck(ev.id));
     }
+    add("✎ Editar", "kb-btn", () => startEdit(ev));
     card.append(grip, title, meta, subInfo, bar, foot, actions);
     return card;
   }
