@@ -1098,6 +1098,14 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
 .kb-src { opacity: .35; }
 .kb-ghost { position: fixed; left: 0; top: 0; z-index: 999; pointer-events: none; margin: 0; box-shadow: 0 18px 40px rgba(0,0,0,.45); transform: rotate(2deg); opacity: .96; }
 .kb-col.over { outline: 2px dashed #2f8dff; outline-offset: -2px; background: rgba(47,141,255,.12); }
+
+/* --- Mac: tela estendida, conteúdo proporcional à largura da janela --- */
+html[data-device="mac"] #app,
+html[data-device="mac"] #dash-screen,
+html[data-device="mac"] #cats-screen { max-width: none; width: 100%; margin-left: 0 !important; margin-right: 0; box-sizing: border-box; }
+html[data-device="mac"] #app { padding: 22px 40px 56px; }
+html[data-device="mac"] #dash-screen, html[data-device="mac"] #cats-screen { padding: 22px 40px 56px; }
+html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
 </style>
 
 <main>
@@ -1131,7 +1139,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-16-1418</span>
+      <span class="status" title="versão desta página">v.2026-11-16-1842</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
