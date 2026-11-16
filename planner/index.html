@@ -1038,6 +1038,48 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
 #pass-login button, #pass-new button { margin: 0; }
 #pass-login .ghost { margin-top: 2px; }
 #auth-msg { margin-top: 12px; min-height: 1.2em; }
+
+/* ---------- Kanban do dia ---------- */
+.kanban-card { padding: 16px; }
+.kb-kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
+.kb-kpi { border-radius: 16px; padding: 12px 14px; background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04)); border: 1px solid rgba(255,255,255,.12); position: relative; overflow: hidden; }
+.kb-kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #2f8dff; }
+.kb-kpi:nth-child(2)::before { background: #34d399; }
+.kb-kpi:nth-child(3)::before { background: #fbbf24; }
+.kb-kpi:nth-child(4)::before { background: #a78bfa; }
+.kb-kpi small { display: block; color: var(--muted); font-size: 12px; font-weight: 700; }
+.kb-kpi strong { display: block; font-size: 20px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.kb-kpi em { position: absolute; right: 10px; top: 10px; font-style: normal; font-size: 11px; font-weight: 800; color: #6ee7b7; background: rgba(52,211,153,.14); border-radius: 999px; padding: 2px 8px; }
+.kb-board { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 12px; align-items: start; }
+.kb-col { border-radius: 18px; padding: 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); min-height: 200px; }
+.kb-col-head { display: flex; align-items: center; gap: 8px; padding: 2px 4px 10px; }
+.kb-col-head b { font-size: 14px; font-weight: 800; }
+.kb-col-head i { margin-left: auto; font-style: normal; font-size: 12px; font-weight: 800; color: var(--muted); background: rgba(255,255,255,.08); border-radius: 999px; padding: 2px 9px; }
+.kb-dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(255,255,255,.08); }
+.kb-cards { display: grid; gap: 10px; }
+.kb-card { border-radius: 14px; padding: 12px 12px 10px; background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.06)); border: 1px solid rgba(255,255,255,.12); border-left: 4px solid var(--cat, #7dd3fc); box-shadow: 0 8px 18px rgba(0,0,0,.22); }
+.kb-title { font-weight: 800; font-size: 14px; overflow-wrap: anywhere; }
+.kb-meta { color: var(--muted); font-size: 12px; font-weight: 600; margin-top: 4px; }
+.kb-chip { display: inline-block; color: var(--cat, #7dd3fc); font-weight: 800; }
+.kb-bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.08); margin: 10px 0 6px; overflow: hidden; }
+.kb-bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #2f8dff, #22c3f5); }
+.kb-foot { display: flex; align-items: center; justify-content: space-between; }
+.kb-clock { font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 800; color: var(--muted); }
+.kb-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.kb-btn { min-height: 36px; padding: 6px 12px; border-radius: 12px; font-size: 13px; font-weight: 800; }
+.kb-btn.start { background: linear-gradient(135deg,#22c55e,#34d399); border: none; color: #fff; }
+.kb-btn.pause { background: linear-gradient(135deg,#f59e0b,#fbbf24); border: none; color: #1c1507; }
+.kb-btn.done { background: linear-gradient(135deg,#2f8dff,#22c3f5); border: none; color: #fff; }
+.kb-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 18px 6px; border: 1px dashed rgba(255,255,255,.16); border-radius: 12px; margin: 0; }
+@media (max-width: 899px) {
+  .kb-kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .kb-board { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(78%, 78%); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; }
+  .kb-col { scroll-snap-align: start; }
+}
+@media (max-width: 599px), html[data-device="iphone"] {
+  .kb-kpi strong { font-size: 18px; }
+  .kb-board { grid-auto-columns: minmax(84%, 84%); }
+}
 </style>
 
 <main>
@@ -1071,7 +1113,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-15-1410</span>
+      <span class="status" title="versão desta página">v.2026-11-16-1115</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -1084,6 +1126,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       <button type="button" data-toggle="tarefas" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Tarefas</span></button>
       <button type="button" data-toggle="notas" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg><span>Notas</span></button>
       <button type="button" data-toggle="backlog" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Backlog</span></button>
+      <button type="button" data-toggle="kanban" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="13" rx="1"/></svg><span>Kanban</span></button>
       <button id="open-dash" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>Dashboard</span></button>
       <button id="open-cats" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span>Categorias</span></button>
       <a class="menu-link" href="../financas/"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/><path d="M16 14.5h2"/></svg><span>Financeiro</span></a>
@@ -1135,6 +1178,12 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
           </div>
           <div id="events-list"></div>
 
+        </section>
+
+        <section class="card kanban-card" data-panel="kanban" hidden>
+          <h2>Kanban do dia</h2>
+          <div id="kb-kpis" class="kb-kpis"></div>
+          <div id="kb-board" class="kb-board"></div>
         </section>
 
         <section class="card backlog" data-panel="backlog" hidden>
@@ -1479,6 +1528,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
   // Linha da lista de gerenciamento (com excluir). n é o número da tarefa no dia.
   function listRow(ev, n) {
     const row = document.createElement("div");
+    row.dataset.id = ev.id;
     row.className = "event-row" + (doneEvents[ev.id] ? " done" : "");
     const corCat = catById(ev.category_id);
     row.style.setProperty("--cat", corCat ? corCat.color : "#c5cde0");
@@ -2878,7 +2928,129 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
   sb.auth.getSession().then(({ data }) => {
     if (!data.session) showApp(false);
   });
+  // ---------- Kanban do dia ----------
+  function kbStatus(ev) {
+    const t = timers[ev.id] || {};
+    if (doneEvents[ev.id] || t.finished) return "concluida";
+    if (t.runningSince || (t.total || 0) > 0) return "andamento";
+    return "pendente";
+  }
+  function kbCheck(id) {
+    const cb = document.querySelector('#events-list .event-row[data-id="' + id + '"] input[type="checkbox"]');
+    if (cb) cb.click();
+  }
+  function kbTimer(id, action) { setTimer(id, action); }
+  function kbCard(ev, status) {
+    const card = document.createElement("article");
+    card.className = "kb-card";
+    const cat = catById(ev.category_id);
+    card.style.setProperty("--cat", cat ? cat.color : "#7dd3fc");
+    const title = document.createElement("div");
+    title.className = "kb-title";
+    title.textContent = ev.title;
+    const meta = document.createElement("div");
+    meta.className = "kb-meta";
+    meta.textContent = ev.start_time.slice(0, 5) + (ev.end_time ? " – " + ev.end_time.slice(0, 5) : "");
+    if (cat) {
+      const chip = document.createElement("span");
+      chip.className = "kb-chip";
+      chip.textContent = cat.name;
+      meta.append(" · ", chip);
+    }
+    const planned = ev.end_time ? (toMin(ev.end_time) - toMin(ev.start_time)) * 60000 : 0;
+    const spent = timerMs(ev.id);
+    const pct = planned > 0 ? Math.min(100, Math.round(spent / planned * 100)) : (status === "concluida" ? 100 : 0);
+    const bar = document.createElement("div");
+    bar.className = "kb-bar";
+    bar.innerHTML = '<span style="width:' + (status === "concluida" ? 100 : pct) + '%"></span>';
+    const foot = document.createElement("div");
+    foot.className = "kb-foot";
+    const clock = document.createElement("span");
+    clock.className = "kb-clock";
+    clock.textContent = fmtClock(spent);
+    foot.append(clock);
+    const actions = document.createElement("div");
+    actions.className = "kb-actions";
+    const add = (label, cls, fn) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = cls;
+      b.textContent = label;
+      b.addEventListener("click", fn);
+      actions.append(b);
+    };
+    if (status === "pendente") {
+      add("▶ Iniciar", "kb-btn start", () => kbTimer(ev.id, "start"));
+      add("✓ Concluir", "kb-btn done", () => kbCheck(ev.id));
+    } else if (status === "andamento") {
+      add("❚❚ Pausar", "kb-btn pause", () => kbTimer(ev.id, "pause"));
+      add("✓ Concluir", "kb-btn done", () => kbCheck(ev.id));
+    } else {
+      add("↺ Reabrir", "kb-btn", () => kbCheck(ev.id));
+    }
+    card.append(title, meta, bar, foot, actions);
+    return card;
+  }
+  function toMin(hm) { const [h, m] = hm.split(":").map(Number); return h * 60 + m; }
+  function renderKanban() {
+    const board = $("kb-board"), kpis = $("kb-kpis");
+    if (!board || !kpis) return;
+    const list = events
+      .filter((ev) => (occurs(ev, currentDay) && !movedOut[ev.id]) || !!movedIn[ev.id])
+      .sort((a, b) => a.start_time.localeCompare(b.start_time));
+    const cols = { pendente: [], andamento: [], concluida: [] };
+    let spentAll = 0;
+    list.forEach((ev) => { const st = kbStatus(ev); cols[st].push(ev); spentAll += timerMs(ev.id); });
+    const total = list.length, done = cols.concluida.length;
+    const pctDone = total ? Math.round(done / total * 100) : 0;
+    kpis.textContent = "";
+    [
+      ["Tarefas do dia", String(total), ""],
+      ["Concluídas", done + " de " + total, pctDone + "%"],
+      ["Em andamento", String(cols.andamento.length), ""],
+      ["Tempo registrado", fmtHM(spentAll), ""],
+    ].forEach(([label, value, tag]) => {
+      const k = document.createElement("div");
+      k.className = "kb-kpi";
+      k.innerHTML = '<small></small><strong></strong>' + (tag ? '<em></em>' : '');
+      k.querySelector("small").textContent = label;
+      k.querySelector("strong").textContent = value;
+      if (tag) k.querySelector("em").textContent = tag;
+      kpis.append(k);
+    });
+    board.textContent = "";
+    [
+      ["pendente", "Pendentes", "#60a5fa"],
+      ["andamento", "Em andamento", "#fbbf24"],
+      ["concluida", "Concluídas", "#34d399"],
+    ].forEach(([key, title, color]) => {
+      const col = document.createElement("section");
+      col.className = "kb-col";
+      const head = document.createElement("header");
+      head.className = "kb-col-head";
+      head.innerHTML = '<span class="kb-dot" style="background:' + color + '"></span><b></b><i></i>';
+      head.querySelector("b").textContent = title;
+      head.querySelector("i").textContent = cols[key].length;
+      const wrap = document.createElement("div");
+      wrap.className = "kb-cards";
+      if (!cols[key].length) {
+        const e = document.createElement("p");
+        e.className = "kb-empty";
+        e.textContent = "Nada aqui";
+        wrap.append(e);
+      }
+      cols[key].forEach((ev) => wrap.append(kbCard(ev, key)));
+      col.append(head, wrap);
+      board.append(col);
+    });
+  }
+  const _renderEventsBase = renderEvents;
+  renderEvents = function () { _renderEventsBase(); renderKanban(); };
+  setInterval(() => { if (openPanels.includes("kanban")) renderKanban(); }, 15000);
+
+
 })();
+
 
   // ---------- Roteamento vindo do menu principal ----------
   function plannerRoute(name) {
