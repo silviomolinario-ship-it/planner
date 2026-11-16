@@ -1050,7 +1050,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
 .kb-kpi small { display: block; color: var(--muted); font-size: 12px; font-weight: 700; }
 .kb-kpi strong { display: block; font-size: 20px; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .kb-kpi em { position: absolute; right: 10px; top: 10px; font-style: normal; font-size: 11px; font-weight: 800; color: #6ee7b7; background: rgba(52,211,153,.14); border-radius: 999px; padding: 2px 8px; }
-.kb-board { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 12px; align-items: start; }
+.kb-board { display: grid; grid-template-columns: repeat(4, minmax(200px, 1fr)); gap: 12px; align-items: start; }
 .kb-col { border-radius: 18px; padding: 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); min-height: 200px; }
 .kb-col-head { display: flex; align-items: center; gap: 8px; padding: 2px 4px 10px; }
 .kb-col-head b { font-size: 14px; font-weight: 800; }
@@ -1113,7 +1113,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-16-1115</span>
+      <span class="status" title="versão desta página">v.2026-11-16-1120</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -2940,7 +2940,8 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     if (cb) cb.click();
   }
   function kbTimer(id, action) { setTimer(id, action); }
-  function kbCard(ev, status) {
+  function kbCard(ev) {
+    const status = kbStatus(ev);
     const card = document.createElement("article");
     card.className = "kb-card";
     const cat = catById(ev.category_id);
@@ -2998,16 +2999,23 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     const list = events
       .filter((ev) => (occurs(ev, currentDay) && !movedOut[ev.id]) || !!movedIn[ev.id])
       .sort((a, b) => a.start_time.localeCompare(b.start_time));
-    const cols = { pendente: [], andamento: [], concluida: [] };
+    const cols = { todo: [], doing: [], done: [], priority: [] };
     let spentAll = 0;
-    list.forEach((ev) => { const st = kbStatus(ev); cols[st].push(ev); spentAll += timerMs(ev.id); });
-    const total = list.length, done = cols.concluida.length;
+    list.forEach((ev) => {
+      const st = kbStatus(ev);
+      spentAll += timerMs(ev.id);
+      if (st === "concluida") cols.done.push(ev);
+      else if (st === "andamento") cols.doing.push(ev);
+      else if (ev.is_priority) cols.priority.push(ev);
+      else cols.todo.push(ev);
+    });
+    const total = list.length, done = cols.done.length;
     const pctDone = total ? Math.round(done / total * 100) : 0;
     kpis.textContent = "";
     [
       ["Tarefas do dia", String(total), ""],
       ["Concluídas", done + " de " + total, pctDone + "%"],
-      ["Em andamento", String(cols.andamento.length), ""],
+      ["Em andamento", String(cols.doing.length), ""],
       ["Tempo registrado", fmtHM(spentAll), ""],
     ].forEach(([label, value, tag]) => {
       const k = document.createElement("div");
@@ -3020,9 +3028,10 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     });
     board.textContent = "";
     [
-      ["pendente", "Pendentes", "#60a5fa"],
-      ["andamento", "Em andamento", "#fbbf24"],
-      ["concluida", "Concluídas", "#34d399"],
+      ["todo", "To do", "#60a5fa"],
+      ["doing", "Doing", "#fbbf24"],
+      ["priority", "Priority", "#f87171"],
+      ["done", "Done", "#34d399"],
     ].forEach(([key, title, color]) => {
       const col = document.createElement("section");
       col.className = "kb-col";
@@ -3039,7 +3048,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
         e.textContent = "Nada aqui";
         wrap.append(e);
       }
-      cols[key].forEach((ev) => wrap.append(kbCard(ev, key)));
+      cols[key].forEach((ev) => wrap.append(kbCard(ev)));
       col.append(head, wrap);
       board.append(col);
     });
