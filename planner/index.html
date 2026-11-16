@@ -1050,7 +1050,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
 .kb-kpi small { display: block; color: var(--muted); font-size: 12px; font-weight: 700; }
 .kb-kpi strong { display: block; font-size: 20px; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .kb-kpi em { position: absolute; right: 10px; top: 10px; font-style: normal; font-size: 11px; font-weight: 800; color: #6ee7b7; background: rgba(52,211,153,.14); border-radius: 999px; padding: 2px 8px; }
-.kb-board { display: grid; grid-template-columns: repeat(4, minmax(200px, 1fr)); gap: 12px; align-items: start; }
+.kb-board { display: grid; grid-template-columns: repeat(5, minmax(180px, 1fr)); gap: 12px; align-items: start; }
 .kb-col { border-radius: 18px; padding: 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); min-height: 200px; }
 .kb-col-head { display: flex; align-items: center; gap: 8px; padding: 2px 4px 10px; }
 .kb-col-head b { font-size: 14px; font-weight: 800; }
@@ -1131,7 +1131,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-16-1200</span>
+      <span class="status" title="versão desta página">v.2026-11-16-1406</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -1881,6 +1881,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     const t = timers[id] || { total: 0, runningSince: null, finished: false };
     if (action === "start" || action === "resume") {
       delete t.idle;
+      delete t.fup;
       if (!t.runningSince && !t.finished) t.runningSince = now;
     } else {
       if (t.runningSince) { t.total += now - t.runningSince; t.runningSince = null; }
@@ -3066,6 +3067,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     const st = kbStatus(ev);
     if (st === "concluida") return "done";
     if (st === "andamento") return "doing";
+    if (timers[ev.id] && timers[ev.id].fup) return "fup";
     return ev.is_priority ? "priority" : "todo";
   }
   function kbCheck(id) {
@@ -3190,17 +3192,20 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     const t = timers[id] || (timers[id] = { total: 0, runningSince: null, finished: false });
     if (to === "done") {
       if (t.runningSince) setTimer(id, "pause");
+      delete t.fup;
       if (!doneEvents[id]) toggleDone(ev, true);
       return;
     }
     if (doneEvents[id]) toggleDone(ev, false);
     if (t.finished) { t.finished = false; scheduleSave(); }
     if (to === "doing") {
+      delete t.fup;
       if (!t.runningSince) setTimer(id, "start"); else renderEvents();
       return;
     }
     if (t.runningSince) setTimer(id, "pause");
     t.idle = true;
+    if (to === "fup") t.fup = true; else delete t.fup;
     scheduleSave();
     if (to === "priority" && !ev.is_priority) updateEventFields(ev, { is_priority: true, priority_level: "normal" });
     else if (to === "todo" && ev.is_priority) updateEventFields(ev, { is_priority: false, priority_level: null });
@@ -3214,7 +3219,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     const list = events
       .filter((ev) => (occurs(ev, currentDay) && !movedOut[ev.id]) || !!movedIn[ev.id])
       .sort((a, b) => a.start_time.localeCompare(b.start_time));
-    const cols = { todo: [], doing: [], priority: [], done: [] };
+    const cols = { todo: [], doing: [], priority: [], fup: [], done: [] };
     let spentAll = 0;
     list.forEach((ev) => { cols[kbColumnOf(ev)].push(ev); spentAll += timerMs(ev.id); });
     const total = list.length, done = cols.done.length;
@@ -3239,6 +3244,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       ["todo", "To do", "#60a5fa"],
       ["doing", "Doing", "#fbbf24"],
       ["priority", "Priority", "#f87171"],
+      ["fup", "Fup", "#c084fc"],
       ["done", "Done", "#34d399"],
     ].forEach(([key, title, color]) => {
       const col = document.createElement("section");
