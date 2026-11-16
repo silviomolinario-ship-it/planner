@@ -1080,6 +1080,24 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
   .kb-kpi strong { font-size: 18px; }
   .kb-board { grid-auto-columns: minmax(84%, 84%); }
 }
+
+/* ---------- Subtarefas, nova tarefa e arrastar no Kanban ---------- */
+.subs { display: grid; gap: 10px; margin: 6px 0; }
+.subs-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sub-row { display: grid; gap: 8px; padding: 10px; border-radius: 14px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); }
+.sub-row .sub-del { justify-self: start; }
+.subs-box { display: grid; gap: 6px; margin-top: 8px; }
+.sub-check { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.sub-check input { width: auto; min-height: 0; margin-top: 2px; }
+.sub-check.done span { text-decoration: line-through; opacity: .6; }
+.kb-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.kb-head h2 { margin: 0; }
+.kb-card { position: relative; }
+.kb-card .kb-title { padding-right: 24px; }
+.kb-grip { position: absolute; right: 8px; top: 8px; padding: 2px 4px; font-size: 16px; line-height: 1; color: var(--muted); cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; }
+.kb-src { opacity: .35; }
+.kb-ghost { position: fixed; left: 0; top: 0; z-index: 999; pointer-events: none; margin: 0; box-shadow: 0 18px 40px rgba(0,0,0,.45); transform: rotate(2deg); opacity: .96; }
+.kb-col.over { outline: 2px dashed #2f8dff; outline-offset: -2px; background: rgba(47,141,255,.12); }
 </style>
 
 <main>
@@ -1113,7 +1131,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-16-1120</span>
+      <span class="status" title="versão desta página">v.2026-11-16-1140</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -1181,7 +1199,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
         </section>
 
         <section class="card kanban-card" data-panel="kanban" hidden>
-          <h2>Kanban do dia</h2>
+          <div class="kb-head"><h2>Kanban do dia</h2><button id="kb-new" class="primary" type="button">+ Nova tarefa</button></div>
           <div id="kb-kpis" class="kb-kpis"></div>
           <div id="kb-board" class="kb-board"></div>
         </section>
@@ -1279,6 +1297,10 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
               <option value="normal">Normal: demais tarefas</option>
             </select>
             <p class="matrix">Matriz de priorização (Eisenhower): Urgente = importante e urgente. Importante = importante, sem pressão de prazo. Normal = o resto, que pode ser delegado ou eliminado.</p>
+            <div class="subs">
+              <div class="subs-head"><b>Subtarefas</b><button type="button" id="sub-add" class="ghost">+ Subtarefa</button></div>
+              <div id="sub-list"></div>
+            </div>
             <p class="hint">Começa no dia selecionado acima. Marque o checkbox em cada dia em que concluir.</p>
             <button id="ev-submit" class="primary" type="submit">Adicionar tarefa</button>
             <button id="ev-cancel" type="button" hidden>Cancelar edição</button>
@@ -1580,6 +1602,30 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       deleteEvent(ev);
     });
 
+    if (subsOf(ev).length) {
+      const sp = subPct(ev);
+      const box = document.createElement("div");
+      box.className = "subs-box";
+      const head = document.createElement("small");
+      head.textContent = "Subtarefas " + sp.done + "/" + sp.total + " · " + sp.pct + "%";
+      const pbar = document.createElement("div");
+      pbar.className = "kb-bar";
+      pbar.innerHTML = '<span style="width:' + sp.pct + '%"></span>';
+      box.append(head, pbar);
+      subsOf(ev).forEach((sub, i) => {
+        const l = document.createElement("label");
+        l.className = "sub-check" + (sub.done ? " done" : "");
+        const c = document.createElement("input");
+        c.type = "checkbox";
+        c.checked = !!sub.done;
+        c.addEventListener("change", () => toggleSub(ev, i, c.checked));
+        const t = document.createElement("span");
+        t.textContent = sub.title + " · " + subLine(sub, ev);
+        l.append(c, t);
+        box.append(l);
+      });
+      text.append(box);
+    }
     const bar = timerControl(ev);
     const edit = document.createElement("button");
     edit.type = "button";
@@ -1834,6 +1880,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     const now = Date.now();
     const t = timers[id] || { total: 0, runningSince: null, finished: false };
     if (action === "start" || action === "resume") {
+      delete t.idle;
       if (!t.runningSince && !t.finished) t.runningSince = now;
     } else {
       if (t.runningSince) { t.total += now - t.runningSince; t.runningSince = null; }
@@ -1997,6 +2044,8 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     $("ev-priority").checked = !!ev.is_priority;
     $("ev-level").value = ev.priority_level || "normal";
     $("ev-level").hidden = !ev.is_priority;
+    $("sub-list").textContent = "";
+    subsOf(ev).forEach((sub) => addSubRow(sub));
     $("ev-submit").textContent = "Salvar alterações";
     $("ev-cancel").hidden = false;
     openModal("modal-tarefa", "Editar tarefa");
@@ -2004,6 +2053,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
   function resetForm() {
     editingId = null;
     $("event-form").reset();
+    $("sub-list").textContent = "";
     renderSubSelect();
     $("ev-startdate").value = todayStr();
     $("ev-enddate").value = todayStr();
@@ -2025,6 +2075,9 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     const endDate = $("ev-enddate").value || null;
     if (endDate && endDate < startDate) { setStatus("A data de fim é anterior à de início"); return; }
     if (!title || !start) return;
+    const subs = collectSubs();
+    const badSub = subs.find((x) => (x.starts_on && x.ends_on && x.ends_on < x.starts_on) || (x.starts_on && x.starts_on === x.ends_on && x.start_time && x.end_time && x.end_time < x.start_time));
+    if (badSub) { setStatus("Revise data ou horário da subtarefa: " + badSub.title); return; }
     try {
       const { data: userData } = await sb.auth.getUser();
       if (!userData || !userData.user) throw new Error("sem sessão");
@@ -2042,6 +2095,8 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
         is_priority: isPrio,
         priority_level: isPrio ? level : null
       };
+      const hadSubs = editingId && subsOf(events.find((x) => x.id === editingId) || {}).length > 0;
+      if (subs.length || hadSubs) fields.subtasks = subs;
       const { error } = editingId
         ? await sb.from("planner_events").update(fields).eq("id", editingId)
         : await sb.from("planner_events").insert(fields);
@@ -2060,7 +2115,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       setStatus("Tarefa salva");
       closeModal("modal-tarefa");
     } catch (err) {
-      setStatus("Não foi possível adicionar o compromisso");
+      setStatus("Não foi possível salvar o compromisso" + (err && err.message ? ": " + err.message : ""));
     }
   }
 
@@ -2928,12 +2983,90 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
   sb.auth.getSession().then(({ data }) => {
     if (!data.session) showApp(false);
   });
+  // ---------- Subtarefas ----------
+  function subsOf(ev) { return Array.isArray(ev.subtasks) ? ev.subtasks : []; }
+  function subPct(ev) {
+    const list = subsOf(ev);
+    const done = list.filter((x) => x.done).length;
+    return { done: done, total: list.length, pct: list.length ? Math.round(done / list.length * 100) : 0 };
+  }
+  function fmtSubDate(d) { return d ? d.split("-").reverse().slice(0, 2).join("/") : ""; }
+  function subLine(sub, ev) {
+    const sd = sub.starts_on || ev.starts_on;
+    const ed = sub.ends_on || sd;
+    const when = fmtSubDate(sd) + (ed && ed !== sd ? " → " + fmtSubDate(ed) : "");
+    const hrs = (sub.start_time ? sub.start_time.slice(0, 5) : "") + (sub.end_time ? "–" + sub.end_time.slice(0, 5) : "");
+    return [when, hrs].filter(Boolean).join(" ");
+  }
+  function addSubRow(sub) {
+    const row = document.createElement("div");
+    row.className = "sub-row";
+    row.dataset.done = sub && sub.done ? "1" : "";
+    row.innerHTML =
+      '<input class="sub-title" type="text" placeholder="Subtarefa" aria-label="Título da subtarefa">' +
+      '<div class="pair"><input class="sub-sd" type="date" aria-label="Data de início da subtarefa"><input class="sub-ed" type="date" aria-label="Data de fim da subtarefa"></div>' +
+      '<div class="pair"><input class="sub-st" type="time" aria-label="Início da subtarefa"><input class="sub-et" type="time" aria-label="Fim da subtarefa"></div>' +
+      '<button type="button" class="ghost sub-del">Remover subtarefa</button>';
+    const q = (sel) => row.querySelector(sel);
+    if (sub) {
+      q(".sub-title").value = sub.title || "";
+      q(".sub-sd").value = sub.starts_on || "";
+      q(".sub-ed").value = sub.ends_on || "";
+      q(".sub-st").value = sub.start_time ? sub.start_time.slice(0, 5) : "";
+      q(".sub-et").value = sub.end_time ? sub.end_time.slice(0, 5) : "";
+    } else {
+      const d = $("ev-startdate").value || todayStr();
+      q(".sub-sd").value = d;
+      q(".sub-ed").value = d;
+      q(".sub-st").value = $("ev-start").value || "";
+      q(".sub-et").value = $("ev-end").value || "";
+    }
+    q(".sub-del").addEventListener("click", () => row.remove());
+    $("sub-list").append(row);
+  }
+  function collectSubs() {
+    return [...$("sub-list").querySelectorAll(".sub-row")].map((row) => {
+      const g = (sel) => row.querySelector(sel).value;
+      return {
+        title: g(".sub-title").trim(),
+        starts_on: g(".sub-sd") || null,
+        ends_on: g(".sub-ed") || null,
+        start_time: g(".sub-st") || null,
+        end_time: g(".sub-et") || null,
+        done: row.dataset.done === "1"
+      };
+    }).filter((x) => x.title);
+  }
+  async function updateEventFields(ev, patch) {
+    Object.assign(ev, patch);
+    renderEvents();
+    try {
+      const { error } = await sb.from("planner_events").update(patch).eq("id", ev.id);
+      if (error) throw error;
+    } catch (e) {
+      setStatus("Não foi possível salvar a alteração");
+      await loadEvents();
+    }
+  }
+  function toggleSub(ev, i, checked) {
+    const list = subsOf(ev).map((x, j) => (j === i ? Object.assign({}, x, { done: checked }) : x));
+    updateEventFields(ev, { subtasks: list });
+  }
+
   // ---------- Kanban do dia ----------
   function kbStatus(ev) {
     const t = timers[ev.id] || {};
     if (doneEvents[ev.id] || t.finished) return "concluida";
-    if (t.runningSince || (t.total || 0) > 0) return "andamento";
+    if (t.runningSince) return "andamento";
+    if (t.idle) return "pendente";
+    if ((t.total || 0) > 0) return "andamento";
     return "pendente";
+  }
+  function kbColumnOf(ev) {
+    const st = kbStatus(ev);
+    if (st === "concluida") return "done";
+    if (st === "andamento") return "doing";
+    return ev.is_priority ? "priority" : "todo";
   }
   function kbCheck(id) {
     const cb = document.querySelector('#events-list .event-row[data-id="' + id + '"] input[type="checkbox"]');
@@ -2946,6 +3079,12 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     card.className = "kb-card";
     const cat = catById(ev.category_id);
     card.style.setProperty("--cat", cat ? cat.color : "#7dd3fc");
+    const grip = document.createElement("span");
+    grip.className = "kb-grip";
+    grip.textContent = "⠿";
+    grip.title = "Arrastar para outra coluna";
+    grip.setAttribute("aria-label", "Arrastar para outra coluna");
+    grip.addEventListener("pointerdown", (e) => kbStartDrag(e, ev, card));
     const title = document.createElement("div");
     title.className = "kb-title";
     title.textContent = ev.title;
@@ -2958,12 +3097,16 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       chip.textContent = cat.name;
       meta.append(" · ", chip);
     }
+    const sp = subPct(ev);
     const planned = ev.end_time ? (toMin(ev.end_time) - toMin(ev.start_time)) * 60000 : 0;
     const spent = timerMs(ev.id);
     const pct = planned > 0 ? Math.min(100, Math.round(spent / planned * 100)) : (status === "concluida" ? 100 : 0);
     const bar = document.createElement("div");
     bar.className = "kb-bar";
-    bar.innerHTML = '<span style="width:' + (status === "concluida" ? 100 : pct) + '%"></span>';
+    bar.innerHTML = '<span style="width:' + (sp.total ? sp.pct : status === "concluida" ? 100 : pct) + '%"></span>';
+    const subInfo = document.createElement("div");
+    subInfo.className = "kb-meta";
+    subInfo.textContent = sp.total ? "Subtarefas " + sp.done + "/" + sp.total + " · " + sp.pct + "%" : "";
     const foot = document.createElement("div");
     foot.className = "kb-foot";
     const clock = document.createElement("span");
@@ -2989,26 +3132,88 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     } else {
       add("↺ Reabrir", "kb-btn", () => kbCheck(ev.id));
     }
-    card.append(title, meta, bar, foot, actions);
+    card.append(grip, title, meta, subInfo, bar, foot, actions);
     return card;
   }
   function toMin(hm) { const [h, m] = hm.split(":").map(Number); return h * 60 + m; }
+
+  // Arrastar e soltar por ponteiro (funciona com dedo e com mouse)
+  let kbDrag = null;
+  function kbStartDrag(e, ev, card) {
+    if (kbDrag || e.button > 0) return;
+    e.preventDefault();
+    const grip = e.currentTarget;
+    const r = card.getBoundingClientRect();
+    const ghost = card.cloneNode(true);
+    ghost.classList.add("kb-ghost");
+    ghost.style.width = r.width + "px";
+    document.body.append(ghost);
+    card.classList.add("kb-src");
+    kbDrag = { ev: ev, card: card, ghost: ghost, grip: grip, id: e.pointerId, dx: e.clientX - r.left, dy: e.clientY - r.top, over: null };
+    grip.setPointerCapture(e.pointerId);
+    grip.addEventListener("pointermove", kbDragMove);
+    grip.addEventListener("pointerup", kbDragEnd);
+    grip.addEventListener("pointercancel", kbDragEnd);
+    kbDragPlace(e);
+  }
+  function kbDragPlace(e) {
+    const d = kbDrag;
+    d.ghost.style.transform = "translate(" + (e.clientX - d.dx) + "px," + (e.clientY - d.dy) + "px)";
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const col = under ? under.closest(".kb-col") : null;
+    const key = col ? col.dataset.key : null;
+    if (key !== d.over) {
+      document.querySelectorAll(".kb-col.over").forEach((c) => c.classList.remove("over"));
+      if (col) col.classList.add("over");
+      d.over = key;
+    }
+  }
+  function kbDragMove(e) { if (kbDrag && e.pointerId === kbDrag.id) kbDragPlace(e); }
+  function kbDragEnd(e) {
+    const d = kbDrag;
+    if (!d || e.pointerId !== d.id) return;
+    kbDrag = null;
+    d.grip.removeEventListener("pointermove", kbDragMove);
+    d.grip.removeEventListener("pointerup", kbDragEnd);
+    d.grip.removeEventListener("pointercancel", kbDragEnd);
+    d.ghost.remove();
+    d.card.classList.remove("kb-src");
+    document.querySelectorAll(".kb-col.over").forEach((c) => c.classList.remove("over"));
+    if (e.type === "pointerup" && d.over && d.over !== kbColumnOf(d.ev)) kbMove(d.ev, d.over);
+    else renderKanban();
+  }
+  function kbMove(ev, to) {
+    const id = ev.id;
+    const t = timers[id] || (timers[id] = { total: 0, runningSince: null, finished: false });
+    if (to === "done") {
+      if (t.runningSince) setTimer(id, "pause");
+      if (!doneEvents[id]) toggleDone(ev, true);
+      return;
+    }
+    if (doneEvents[id]) toggleDone(ev, false);
+    if (t.finished) { t.finished = false; scheduleSave(); }
+    if (to === "doing") {
+      if (!t.runningSince) setTimer(id, "start"); else renderEvents();
+      return;
+    }
+    if (t.runningSince) setTimer(id, "pause");
+    t.idle = true;
+    scheduleSave();
+    if (to === "priority" && !ev.is_priority) updateEventFields(ev, { is_priority: true, priority_level: "normal" });
+    else if (to === "todo" && ev.is_priority) updateEventFields(ev, { is_priority: false, priority_level: null });
+    else renderEvents();
+  }
+
   function renderKanban() {
+    if (kbDrag) return;
     const board = $("kb-board"), kpis = $("kb-kpis");
     if (!board || !kpis) return;
     const list = events
       .filter((ev) => (occurs(ev, currentDay) && !movedOut[ev.id]) || !!movedIn[ev.id])
       .sort((a, b) => a.start_time.localeCompare(b.start_time));
-    const cols = { todo: [], doing: [], done: [], priority: [] };
+    const cols = { todo: [], doing: [], priority: [], done: [] };
     let spentAll = 0;
-    list.forEach((ev) => {
-      const st = kbStatus(ev);
-      spentAll += timerMs(ev.id);
-      if (st === "concluida") cols.done.push(ev);
-      else if (st === "andamento") cols.doing.push(ev);
-      else if (ev.is_priority) cols.priority.push(ev);
-      else cols.todo.push(ev);
-    });
+    list.forEach((ev) => { cols[kbColumnOf(ev)].push(ev); spentAll += timerMs(ev.id); });
     const total = list.length, done = cols.done.length;
     const pctDone = total ? Math.round(done / total * 100) : 0;
     kpis.textContent = "";
@@ -3035,6 +3240,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
     ].forEach(([key, title, color]) => {
       const col = document.createElement("section");
       col.className = "kb-col";
+      col.dataset.key = key;
       const head = document.createElement("header");
       head.className = "kb-col-head";
       head.innerHTML = '<span class="kb-dot" style="background:' + color + '"></span><b></b><i></i>';
@@ -3053,6 +3259,14 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
       board.append(col);
     });
   }
+  $("kb-new").addEventListener("click", () => {
+    resetForm();
+    $("ev-startdate").value = currentDay;
+    $("ev-enddate").value = currentDay;
+    $("ev-start").value = nowHour();
+    openModal("modal-tarefa", "Nova tarefa");
+  });
+  $("sub-add").addEventListener("click", () => addSubRow(null));
   const _renderEventsBase = renderEvents;
   renderEvents = function () { _renderEventsBase(); renderKanban(); };
   setInterval(() => { if (openPanels.includes("kanban")) renderKanban(); }, 15000);
