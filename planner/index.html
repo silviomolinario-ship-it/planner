@@ -1106,6 +1106,7 @@ html[data-device="mac"] #cats-screen { max-width: none; width: 100%; margin-left
 html[data-device="mac"] #app { padding: 22px 40px 56px; }
 html[data-device="mac"] #dash-screen, html[data-device="mac"] #cats-screen { padding: 22px 40px 56px; }
 html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
+.kb-move { min-height: 40px; padding: 8px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; background: rgba(255,255,255,.08); color: inherit; border: 1px solid rgba(255,255,255,.18); }
 </style>
 
 <main>
@@ -1139,7 +1140,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-16-1842</span>
+      <span class="status" title="versão desta página">v.2026-11-17-1030</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -1299,6 +1300,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
               <option value="reuniao">Reunião (verde na agenda)</option>
             </select>
             <label class="prio-toggle"><input id="ev-priority" type="checkbox"> Tarefa prioritária</label>
+            <label class="prio-toggle"><input id="ev-fup" type="checkbox"> Fup (vai direto para a coluna Fup)</label>
             <select id="ev-level" aria-label="Nível de prioridade" hidden>
               <option value="urgente">Urgente: importante e urgente, fazer agora</option>
               <option value="importante">Importante: não urgente, agendar</option>
@@ -2053,6 +2055,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
     $("ev-priority").checked = !!ev.is_priority;
     $("ev-level").value = ev.priority_level || "normal";
     $("ev-level").hidden = !ev.is_priority;
+    $("ev-fup").checked = !!(startOnCurrent(ev) && timers[ev.id] && timers[ev.id].fup);
     $("sub-list").textContent = "";
     subsOf(ev).forEach((sub) => addSubRow(sub));
     $("ev-submit").textContent = "Salvar alterações";
@@ -2062,6 +2065,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
   function resetForm() {
     editingId = null;
     $("event-form").reset();
+    $("ev-fup").checked = false;
     $("sub-list").textContent = "";
     renderSubSelect();
     $("ev-startdate").value = todayStr();
@@ -2080,6 +2084,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
     const isPrio = $("ev-priority").checked;
     const level = $("ev-level").value;
     const kind = $("ev-kind").value;
+    const fupChk = $("ev-fup").checked;
     const startDate = $("ev-startdate").value || todayStr();
     const endDate = $("ev-enddate").value || null;
     if (endDate && endDate < startDate) { setStatus("A data de fim é anterior à de início"); return; }
@@ -2106,10 +2111,23 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
       };
       const hadSubs = editingId && subsOf(events.find((x) => x.id === editingId) || {}).length > 0;
       if (subs.length || hadSubs) fields.subtasks = subs;
-      const { error } = editingId
-        ? await sb.from("planner_events").update(fields).eq("id", editingId)
-        : await sb.from("planner_events").insert(fields);
+      let savedId = editingId;
+      let error = null;
+      if (editingId) {
+        ({ error } = await sb.from("planner_events").update(fields).eq("id", editingId));
+      } else {
+        const res = await sb.from("planner_events").insert(fields).select("id").single();
+        error = res.error;
+        savedId = res.data ? (Array.isArray(res.data) ? (res.data[0] || {}).id : res.data.id) : null;
+      }
       if (error) throw error;
+      const wasFup = !!(editingId && startOnCurrent({ starts_on: startDate }) && timers[editingId] && timers[editingId].fup);
+      if (savedId && (fupChk || wasFup)) {
+        const base = Object.assign({ total: 0, runningSince: null, finished: false }, timers[savedId] && startDate === currentDay ? timers[savedId] : {});
+        if (base.runningSince) { base.total = (base.total || 0) + Date.now() - base.runningSince; base.runningSince = null; }
+        if (fupChk) { base.idle = true; base.fup = true; } else { delete base.fup; }
+        await seedCardState(startDate, savedId, base);
+      }
       $("ev-title").value = "";
       $("ev-start").value = nowHour();
       $("ev-end").value = "";
@@ -2992,6 +3010,28 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
   sb.auth.getSession().then(({ data }) => {
     if (!data.session) showApp(false);
   });
+  // ---------- Estado do cartão por dia (Fup, pausa) ----------
+  function startOnCurrent(ev) { return !!ev && (ev.starts_on === currentDay || !ev.starts_on); }
+  async function seedCardState(day, id, state) {
+    if (day === currentDay) {
+      timers[id] = state;
+      scheduleSave();
+      renderEvents();
+      return;
+    }
+    const { data: userData } = await sb.auth.getUser();
+    const { data: row, error: readErr } = await sb.from("planner_days").select("data").eq("day", day).maybeSingle();
+    if (readErr) throw readErr;
+    const d = Object.assign(emptyData(), (row && row.data) || {});
+    d.timers = Object.assign({}, d.timers || {}, { [id]: state });
+    const { error } = await sb.from("planner_days").upsert(
+      { user_id: userData.user.id, day: day, data: d, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,day" }
+    );
+    if (error) throw error;
+    writeCache(day, d);
+  }
+
   // ---------- Subtarefas ----------
   function subsOf(ev) { return Array.isArray(ev.subtasks) ? ev.subtasks : []; }
   function subPct(ev) {
@@ -3063,6 +3103,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
   }
 
   // ---------- Kanban do dia ----------
+  const KB_COLS = [["todo", "To do"], ["doing", "Doing"], ["priority", "Priority"], ["reunioes", "Reuniões"], ["fup", "Fup"], ["done", "Done"]];
   function kbStatus(ev) {
     const t = timers[ev.id] || {};
     if (doneEvents[ev.id] || t.finished) return "concluida";
@@ -3146,6 +3187,23 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
       add("↺ Reabrir", "kb-btn", () => kbCheck(ev.id));
     }
     add("✎ Editar", "kb-btn", () => startEdit(ev));
+    const mv = document.createElement("select");
+    mv.className = "kb-move";
+    mv.setAttribute("aria-label", "Mover para outra coluna");
+    const here = kbColumnOf(ev);
+    const ph = document.createElement("option");
+    ph.value = "";
+    ph.textContent = "Mover para…";
+    mv.append(ph);
+    KB_COLS.forEach(([key, title]) => {
+      if (key === here) return;
+      const o = document.createElement("option");
+      o.value = key;
+      o.textContent = title;
+      mv.append(o);
+    });
+    mv.addEventListener("change", () => { if (mv.value) kbMove(ev, mv.value); });
+    actions.append(mv);
     card.append(grip, title, meta, subInfo, bar, foot, actions);
     return card;
   }
