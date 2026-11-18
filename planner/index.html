@@ -1072,9 +1072,6 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
 .kb-btn.pause { background: linear-gradient(135deg,#f59e0b,#fbbf24); border: none; color: #1c1507; }
 .kb-btn.done { background: linear-gradient(135deg,#2f8dff,#22c3f5); border: none; color: #fff; }
 .kb-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 18px 6px; border: 1px dashed rgba(255,255,255,.16); border-radius: 12px; margin: 0; }
-@media (min-width: 900px) and (max-width: 1199px) {
-  .kb-board { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
 @media (max-width: 899px) {
   .kb-kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .kb-board { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(78%, 78%); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; }
@@ -1111,6 +1108,25 @@ html[data-device="mac"] #app { padding: 22px 40px 56px; }
 html[data-device="mac"] #dash-screen, html[data-device="mac"] #cats-screen { padding: 22px 40px 56px; }
 html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
 .kb-move { min-height: 40px; padding: 8px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; background: rgba(255,255,255,.08); color: inherit; border: 1px solid rgba(255,255,255,.18); }
+/* --- iPad (paisagem, 900px ou mais): 6 colunas em uma linha, cards compactos --- */
+@media (min-width: 900px) {
+  html[data-device="ipad"] .kb-board { gap: 8px; }
+  html[data-device="ipad"] .kb-col { padding: 8px; border-radius: 14px; min-height: 160px; }
+  html[data-device="ipad"] .kb-col-head { padding: 0 2px 8px; gap: 6px; }
+  html[data-device="ipad"] .kb-col-head b { font-size: 12px; }
+  html[data-device="ipad"] .kb-col-head i { font-size: 11px; padding: 1px 7px; }
+  html[data-device="ipad"] .kb-cards { gap: 8px; }
+  html[data-device="ipad"] .kb-card { padding: 9px 9px 8px; border-radius: 12px; }
+  html[data-device="ipad"] .kb-card .kb-title { font-size: 12px; padding-right: 18px; line-height: 1.25; }
+  html[data-device="ipad"] .kb-meta { font-size: 10.5px; margin-top: 3px; }
+  html[data-device="ipad"] .kb-bar { margin: 6px 0 4px; height: 4px; }
+  html[data-device="ipad"] .kb-foot .kb-clock { font-size: 11px; }
+  html[data-device="ipad"] .kb-actions { gap: 4px; margin-top: 6px; }
+  html[data-device="ipad"] .kb-btn, html[data-device="ipad"] .kb-move { min-height: 28px; padding: 4px 6px; font-size: 10.5px; border-radius: 9px; }
+  html[data-device="ipad"] .kb-move { width: 100%; }
+  html[data-device="ipad"] .kb-grip { font-size: 13px; right: 5px; top: 5px; }
+  html[data-device="ipad"] .kb-kpi strong { font-size: 16px; }
+}
 </style>
 
 <main>
@@ -1144,7 +1160,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-18-1650</span>
+      <span class="status" title="versão desta página">v.2026-11-18-1655</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
