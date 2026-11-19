@@ -1050,7 +1050,7 @@ html[data-device="iphone"] .hist-table td::before { white-space: nowrap; }
 .kb-kpi small { display: block; color: var(--muted); font-size: 12px; font-weight: 700; }
 .kb-kpi strong { display: block; font-size: 20px; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .kb-kpi em { position: absolute; right: 10px; top: 10px; font-style: normal; font-size: 11px; font-weight: 800; color: #6ee7b7; background: rgba(52,211,153,.14); border-radius: 999px; padding: 2px 8px; }
-.kb-board { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+.kb-board { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
 .kb-col { border-radius: 18px; padding: 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); min-height: 200px; display: flex; flex-direction: column; box-sizing: border-box; min-width: 0; }
 .kb-col .kb-cards { flex: 1; display: grid; gap: 10px; align-content: start; }
 .kb-col-head { display: flex; align-items: center; gap: 8px; padding: 2px 4px 10px; }
@@ -1127,6 +1127,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
   html[data-device="ipad"] .kb-grip { font-size: 13px; right: 5px; top: 5px; }
   html[data-device="ipad"] .kb-kpi strong { font-size: 16px; }
 }
+.kb-btn.cancel { background: rgba(248,113,113,.16); border: 1px solid rgba(248,113,113,.45); color: #fecaca; }
 </style>
 
 <main>
@@ -1160,7 +1161,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-18-1655</span>
+      <span class="status" title="versão desta página">v.2026-11-19-1215</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -3123,7 +3124,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
   }
 
   // ---------- Kanban do dia ----------
-  const KB_COLS = [["todo", "To do"], ["doing", "Doing"], ["priority", "Priority"], ["reunioes", "Reuniões"], ["fup", "Fup"], ["done", "Done"]];
+  const KB_COLS = [["todo", "To do"], ["doing", "Doing"], ["priority", "Priority"], ["reunioes", "Reuniões"], ["fup", "Fup"], ["done", "Done"], ["canceladas", "Canceladas"]];
   function kbStatus(ev) {
     const t = timers[ev.id] || {};
     if (doneEvents[ev.id] || t.finished) return "concluida";
@@ -3133,6 +3134,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
     return "pendente";
   }
   function kbColumnOf(ev) {
+    if (timers[ev.id] && timers[ev.id].canc) return "canceladas";
     const st = kbStatus(ev);
     if (st === "concluida") return "done";
     if (st === "andamento") return "doing";
@@ -3147,6 +3149,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
   function kbTimer(id, action) { setTimer(id, action); }
   function kbCard(ev) {
     const status = kbStatus(ev);
+    const isCanc = !!(timers[ev.id] && timers[ev.id].canc);
     const card = document.createElement("article");
     card.className = "kb-card";
     const cat = catById(ev.category_id);
@@ -3195,7 +3198,9 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
       b.addEventListener("click", fn);
       actions.append(b);
     };
-    if (status === "pendente") {
+    if (isCanc) {
+      add("↺ Reativar", "kb-btn start", () => kbMove(ev, "todo"));
+    } else if (status === "pendente") {
       add("▶ Iniciar", "kb-btn start", () => kbTimer(ev.id, "start"));
       add("✓ Concluir", "kb-btn done", () => kbCheck(ev.id));
     } else if (status === "andamento") {
@@ -3207,6 +3212,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
       add("↺ Reabrir", "kb-btn", () => kbCheck(ev.id));
     }
     add("✎ Editar", "kb-btn", () => startEdit(ev));
+    if (!isCanc) add("✕ Cancelar", "kb-btn cancel", () => kbMove(ev, "canceladas"));
     const mv = document.createElement("select");
     mv.className = "kb-move";
     mv.setAttribute("aria-label", "Mover para outra coluna");
@@ -3277,6 +3283,16 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
   function kbMove(ev, to) {
     const id = ev.id;
     const t = timers[id] || (timers[id] = { total: 0, runningSince: null, finished: false });
+    if (to === "canceladas") {
+      if (t.runningSince) setTimer(id, "pause");
+      delete t.fup;
+      t.canc = true;
+      t.idle = true;
+      scheduleSave();
+      renderEvents();
+      return;
+    }
+    if (t.canc) { delete t.canc; scheduleSave(); }
     if (to === "done") {
       if (t.runningSince) setTimer(id, "pause");
       delete t.fup;
@@ -3309,10 +3325,10 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
     const list = events
       .filter((ev) => (occurs(ev, currentDay) && !movedOut[ev.id]) || !!movedIn[ev.id])
       .sort((a, b) => a.start_time.localeCompare(b.start_time));
-    const cols = { todo: [], doing: [], priority: [], reunioes: [], fup: [], done: [] };
+    const cols = { todo: [], doing: [], priority: [], reunioes: [], fup: [], done: [], canceladas: [] };
     let spentAll = 0;
     list.forEach((ev) => { cols[kbColumnOf(ev)].push(ev); spentAll += timerMs(ev.id); });
-    const total = list.length, done = cols.done.length;
+    const total = list.length - cols.canceladas.length, done = cols.done.length;
     const pctDone = total ? Math.round(done / total * 100) : 0;
     kpis.textContent = "";
     [
@@ -3337,6 +3353,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
       ["reunioes", "Reuniões", "#2dd4bf"],
       ["fup", "Fup", "#c084fc"],
       ["done", "Done", "#34d399"],
+      ["canceladas", "Canceladas", "#94a3b8"],
     ].forEach(([key, title, color]) => {
       const col = document.createElement("section");
       col.className = "kb-col";
