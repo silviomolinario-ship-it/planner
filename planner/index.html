@@ -1161,7 +1161,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-19-1215</span>
+      <span class="status" title="versão desta página">v.2026-11-19-1225</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -3124,7 +3124,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
   }
 
   // ---------- Kanban do dia ----------
-  const KB_COLS = [["todo", "To do"], ["doing", "Doing"], ["priority", "Priority"], ["reunioes", "Reuniões"], ["fup", "Fup"], ["done", "Done"], ["canceladas", "Canceladas"]];
+  const KB_COLS = [["todo", "To do"], ["doing", "Doing"], ["priority", "Priority"], ["reunioes", "Reuniões"], ["fup", "Fup"], ["done", "Done"], ["canceladas", "Declined"]];
   function kbStatus(ev) {
     const t = timers[ev.id] || {};
     if (doneEvents[ev.id] || t.finished) return "concluida";
@@ -3212,7 +3212,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
       add("↺ Reabrir", "kb-btn", () => kbCheck(ev.id));
     }
     add("✎ Editar", "kb-btn", () => startEdit(ev));
-    if (!isCanc) add("✕ Cancelar", "kb-btn cancel", () => kbMove(ev, "canceladas"));
+    if (!isCanc) add("✕ Declined", "kb-btn cancel", () => kbMove(ev, "canceladas"));
     const mv = document.createElement("select");
     mv.className = "kb-move";
     mv.setAttribute("aria-label", "Mover para outra coluna");
@@ -3353,7 +3353,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
       ["reunioes", "Reuniões", "#2dd4bf"],
       ["fup", "Fup", "#c084fc"],
       ["done", "Done", "#34d399"],
-      ["canceladas", "Canceladas", "#94a3b8"],
+      ["canceladas", "Declined", "#94a3b8"],
     ].forEach(([key, title, color]) => {
       const col = document.createElement("section");
       col.className = "kb-col";
