@@ -1129,10 +1129,9 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
 }
 .kb-btn.cancel { background: rgba(248,113,113,.16); border: 1px solid rgba(248,113,113,.45); color: #fecaca; }
 /* Ações do cartão como barra de ícones */
-.kb-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
-.kb-actions .kb-btn { width: 34px; height: 34px; min-height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; line-height: 1; border-radius: 10px; }
-.kb-actions .kb-move { flex: 1 1 100%; }
-html[data-device="ipad"] .kb-actions .kb-btn { width: 28px; height: 28px; min-height: 28px; font-size: 12px; }
+.kb-actions { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; margin-top: 10px; }
+.kb-actions .kb-btn { flex: 1 1 0; min-width: 0; max-width: 28px; width: 24px; height: 24px; min-height: 24px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1; border-radius: 7px; }
+html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-height: 22px; font-size: 10px; }
 </style>
 
 <main>
@@ -1166,7 +1165,7 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 28px; height: 28px; min-he
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-19-1335</span>
+      <span class="status" title="versão desta página">v.2026-11-19-1358</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -3237,8 +3236,8 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 28px; height: 28px; min-he
       mv.append(o);
     });
     mv.addEventListener("change", () => { if (mv.value) kbMove(ev, mv.value); });
-    actions.append(mv);
-    card.append(grip, title, meta, subInfo, bar, foot, actions);
+    mv.style.marginTop = "6px";
+    card.append(grip, title, meta, subInfo, bar, foot, actions, mv);
     return card;
   }
   function toMin(hm) { const [h, m] = hm.split(":").map(Number); return h * 60 + m; }
