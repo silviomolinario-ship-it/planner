@@ -1128,6 +1128,11 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
   html[data-device="ipad"] .kb-kpi strong { font-size: 16px; }
 }
 .kb-btn.cancel { background: rgba(248,113,113,.16); border: 1px solid rgba(248,113,113,.45); color: #fecaca; }
+/* Ações do cartão como barra de ícones */
+.kb-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.kb-actions .kb-btn { width: 34px; height: 34px; min-height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; line-height: 1; border-radius: 10px; }
+.kb-actions .kb-move { flex: 1 1 100%; }
+html[data-device="ipad"] .kb-actions .kb-btn { width: 28px; height: 28px; min-height: 28px; font-size: 12px; }
 </style>
 
 <main>
@@ -1161,7 +1166,7 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-19-1225</span>
+      <span class="status" title="versão desta página">v.2026-11-19-1335</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -3191,10 +3196,13 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
     const actions = document.createElement("div");
     actions.className = "kb-actions";
     const add = (label, cls, fn) => {
+      const parts = label.split(" ");
       const b = document.createElement("button");
       b.type = "button";
       b.className = cls;
-      b.textContent = label;
+      b.textContent = parts[0];
+      b.title = parts.slice(1).join(" ");
+      b.setAttribute("aria-label", parts.slice(1).join(" "));
       b.addEventListener("click", fn);
       actions.append(b);
     };
