@@ -1182,6 +1182,19 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
   background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 65%, #ffffff));
 }
 @media (max-width: 599px) { .lq-pickers { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+/* Subtarefas como lista de verificação */
+.checklist { margin-top: 10px; display: grid; gap: 8px; padding: 12px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+.cl-head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
+.cl-pct-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+.cl-pct-row .kb-bar { flex: 1; margin: 0; height: 6px; }
+.cl-item { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; font-weight: 500; cursor: pointer; }
+.cl-item input[type="checkbox"] { width: 18px; height: 18px; min-height: 0; margin: 2px 0 0; flex: 0 0 auto; }
+.cl-item .t { display: grid; gap: 2px; }
+.cl-item small { color: var(--muted); font-size: 12px; font-weight: 500; background: none; border: 0; padding: 0; border-radius: 0; box-shadow: none; }
+.cl-item.done .t { text-decoration: line-through; opacity: .55; }
+.cl-add { display: flex; gap: 8px; margin-top: 4px; }
+.cl-add input { flex: 1; min-height: 40px; }
+.cl-add button { min-height: 40px; }
 </style>
 
 <main>
@@ -1216,7 +1229,7 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-20-1730</span>
+      <span class="status" title="versão desta página">v.2026-11-20-1755</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -1644,6 +1657,26 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
     const list = subsOf(parent).map((x) => (x.child_id === childId ? Object.assign({}, x, { done: done }) : x));
     updateEventFields(parent, { subtasks: list });
   }
+  // Novo item da lista: cria a subtarefa e a tarefa na data da principal
+  async function addChecklistItem(ev, title) {
+    try {
+      const { data: userData } = await sb.auth.getUser();
+      const day = ev.starts_on || currentDay;
+      const sub = { title: title, starts_on: day, ends_on: day, start_time: ev.start_time, end_time: ev.end_time || null, done: false, child_id: null };
+      await syncChildren([sub], [], {
+        user_id: userData.user.id,
+        category_id: ev.category_id,
+        subcategory_id: ev.subcategory_id,
+        kind: ev.kind,
+        starts_on: day,
+        start_time: ev.start_time,
+        end_time: ev.end_time
+      });
+      await updateEventFields(ev, { subtasks: subsOf(ev).concat([sub]) });
+    } catch (err) {
+      setStatus("Não foi possível adicionar o item");
+    }
+  }
   // Cada subtarefa vira uma tarefa na data informada
   async function syncChildren(subs, oldSubs, base) {
     const keep = new Set(subs.map((x) => x.child_id).filter(Boolean));
@@ -1759,25 +1792,47 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
     if (subsOf(ev).length) {
       const sp = subPct(ev);
       const box = document.createElement("div");
-      box.className = "subs-box";
-      const head = document.createElement("small");
-      head.textContent = "Subtarefas " + sp.done + "/" + sp.total + " · " + sp.pct + "%";
+      box.className = "checklist";
+      const head = document.createElement("div");
+      head.className = "cl-head";
+      head.innerHTML = '<span aria-hidden="true">☑</span><span>Subtarefas</span>';
+      const pctRow = document.createElement("div");
+      pctRow.className = "cl-pct-row";
+      const pct = document.createElement("span");
+      pct.textContent = sp.pct + "%";
       const pbar = document.createElement("div");
       pbar.className = "kb-bar";
       pbar.innerHTML = '<span style="width:' + sp.pct + '%"></span>';
-      box.append(head, pbar);
+      pctRow.append(pct, pbar);
+      box.append(head, pctRow);
       subsOf(ev).forEach((sub, i) => {
         const l = document.createElement("label");
-        l.className = "sub-check" + (sub.done ? " done" : "");
+        l.className = "cl-item" + (sub.done ? " done" : "");
         const c = document.createElement("input");
         c.type = "checkbox";
         c.checked = !!sub.done;
         c.addEventListener("change", () => toggleSub(ev, i, c.checked));
-        const t = document.createElement("span");
-        t.textContent = sub.title + " · " + subLine(sub, ev);
-        l.append(c, t);
+        const body = document.createElement("span");
+        body.className = "t";
+        body.textContent = sub.title;
+        const when = document.createElement("small");
+        when.textContent = subLine(sub, ev);
+        body.append(when);
+        l.append(c, body);
         box.append(l);
       });
+      const addForm = document.createElement("form");
+      addForm.className = "cl-add";
+      addForm.innerHTML = '<input type="text" placeholder="Adicionar um item" aria-label="Adicionar um item"><button type="submit" class="ghost">Adicionar</button>';
+      addForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const inp = addForm.querySelector("input");
+        const t = inp.value.trim();
+        if (!t) return;
+        inp.value = "";
+        addChecklistItem(ev, t);
+      });
+      box.append(addForm);
       text.append(box);
     }
     const bar = timerControl(ev);
