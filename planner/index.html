@@ -1132,6 +1132,37 @@ html[data-device="mac"] #dash-screen { grid-template-columns: minmax(0, 1fr) min
 .kb-actions { display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 4px; margin-top: 10px; }
 .kb-actions .kb-btn { flex: 1 1 0; min-width: 0; max-width: 28px; width: 24px; height: 24px; min-height: 24px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1; border-radius: 7px; }
 html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-height: 22px; font-size: 10px; }
+/* ---------- Temas ---------- */
+:root { --bg-dim: .35; }
+:root[data-bg="1"] body {
+  background-image: linear-gradient(rgba(6,10,24,var(--bg-dim)), rgba(6,10,24,var(--bg-dim))), var(--bg-photo) !important;
+  background-size: cover; background-position: center; background-repeat: no-repeat;
+}
+:root[data-tema="claro"] { color-scheme: light; --ink:#1b2236; --muted:#55607a; --accent:#3b6cf6; --accent-hover:#2f5ae0; --accent-soft: rgba(59,108,246,.14); --line: rgba(20,30,60,.12); --glass: linear-gradient(180deg, rgba(255,255,255,.84), rgba(255,255,255,.58)); --shadow-sm: 0 4px 12px rgba(30,40,90,.10); --shadow: 0 14px 30px rgba(30,40,90,.12), inset 0 1px 0 rgba(255,255,255,.9); --soft-blue: rgba(59,108,246,.10); --soft-pink: rgba(236,72,153,.08); --soft-yellow: rgba(245,158,11,.12); --soft-red: rgba(244,63,94,.10); }
+:root[data-tema="claro"] body { background: radial-gradient(860px 560px at 90% 110%, rgba(255,190,140,.45), transparent 66%), radial-gradient(760px 520px at -6% -10%, rgba(120,160,255,.45), transparent 62%), linear-gradient(180deg, #eef3ff 0%, #f7eefb 100%); }
+:root[data-tema="claro"] .top * { color: var(--ink); }
+:root[data-tema="claro"] .panel-menu::before { color: var(--ink) !important; }
+:root[data-tema="claro"] .top .muted, :root[data-tema="claro"] #device-info, :root[data-tema="claro"] #sync-status { color: var(--muted); }
+:root[data-tema="claro"] .panel-menu button[aria-pressed="true"], :root[data-tema="claro"] .panel-menu button[aria-pressed="true"] * { color: #fff; }
+:root[data-tema="claro"] .modal-box { background: linear-gradient(180deg, rgba(255,255,255,.97), rgba(243,247,255,.97)); }
+:root[data-tema="noite"] { --accent:#60a5fa; --accent-hover:#3b8ef0; --glass: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03)); --soft-blue: rgba(96,165,250,.12); }
+:root[data-tema="noite"] body { background: radial-gradient(700px 480px at 85% 110%, rgba(30,64,175,.35), transparent 65%), linear-gradient(180deg, #060a16 0%, #0b1430 100%); }
+:root[data-tema="aurora"] { --accent:#34d399; --accent-hover:#22bd85; --accent-soft: rgba(52,211,153,.16); --soft-blue: rgba(52,211,153,.12); --soft-pink: rgba(168,85,247,.14); }
+:root[data-tema="aurora"] body { background: radial-gradient(900px 600px at 15% 110%, rgba(16,185,129,.45), transparent 65%), radial-gradient(760px 520px at 95% -10%, rgba(139,92,246,.45), transparent 62%), linear-gradient(180deg, #052e2b 0%, #1a1240 100%); }
+:root[data-tema="grafite"] { --accent:#d4d4d8; --accent-hover:#e4e4e7; --accent-soft: rgba(212,212,216,.14); --glass: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04)); --soft-blue: rgba(212,212,216,.08); --soft-pink: rgba(212,212,216,.06); --soft-yellow: rgba(212,212,216,.08); --soft-red: rgba(212,212,216,.06); }
+:root[data-tema="grafite"] body { background: linear-gradient(180deg, #0e0f12 0%, #2a2d35 100%); }
+:root[data-tema="poente"] { --accent:#fb923c; --accent-hover:#f97316; --accent-soft: rgba(251,146,60,.16); --soft-yellow: rgba(251,146,60,.14); --soft-pink: rgba(244,114,182,.14); }
+:root[data-tema="poente"] body { background: radial-gradient(860px 560px at 88% 112%, rgba(251,146,60,.6), transparent 64%), radial-gradient(700px 480px at -6% -10%, rgba(244,114,182,.35), transparent 62%), linear-gradient(180deg, #2a0f2e 0%, #5b1d3a 60%, #7c2d12 100%); }
+:root[data-tema] body { background-attachment: fixed; }
+:root[data-bg="1"] body { background-attachment: fixed; }
+.theme-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
+.theme-card { display: grid; gap: 6px; padding: 8px; border-radius: 14px; border: 2px solid transparent; background: rgba(255,255,255,.06); color: inherit; cursor: pointer; font: inherit; text-align: left; }
+.theme-card[aria-pressed="true"] { border-color: var(--accent); }
+.theme-prev { display: block; height: 52px; border-radius: 10px; }
+.theme-card b { font-size: 13px; }
+.theme-sub { margin: 6px 0 4px; font-size: 15px; }
+.bg-file { width: 100%; min-height: 44px; font-size: 14px; }
+@media (max-width: 599px) { .theme-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
 </style>
 
 <main>
@@ -1152,7 +1183,8 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
     <p id="auth-msg" role="status"></p>
   </section>
 
-  </head>
+  <script>try{var d=document.documentElement,t=localStorage.getItem('planner-tema');if(t)d.dataset.tema=t;var b=localStorage.getItem('planner-bg');if(b){d.dataset.bg='1';d.style.setProperty('--bg-photo','url("'+b+'")');}var g=localStorage.getItem('planner-bg-dim');if(g)d.style.setProperty('--bg-dim',(+g)/100);}catch(e){}</script>
+</head>
 <body>
 <section id="app" hidden>
     <header class="top">
@@ -1165,7 +1197,7 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-19-1402</span>
+      <span class="status" title="versão desta página">v.2026-11-20-1320</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -1181,6 +1213,7 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
       <button type="button" data-toggle="kanban" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="13" rx="1"/></svg><span>Kanban</span></button>
       <button id="open-dash" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>Dashboard</span></button>
       <button id="open-cats" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span>Categorias</span></button>
+      <button id="open-theme" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.7-.8 1.7-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H17a4 4 0 0 0 4-4c0-4.6-4-8.6-9-8.6z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7.5" r="1.2"/><circle cx="14.5" cy="7.5" r="1.2"/></svg><span>Temas</span></button>
       <a class="menu-link" href="../financas/"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/><path d="M16 14.5h2"/></svg><span>Financeiro</span></a>
       </nav>
       </div>
@@ -1340,6 +1373,21 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
             <button id="ev-submit" class="primary" type="submit">Adicionar tarefa</button>
             <button id="ev-cancel" type="button" hidden>Cancelar edição</button>
           </form>
+  </div>
+</div>
+<div id="modal-theme" class="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-theme-title">
+    <div class="modal-head"><h2 id="modal-theme-title">Temas</h2><button type="button" class="modal-close" data-close="modal-theme" aria-label="Fechar">×</button></div>
+    <div id="theme-grid" class="theme-grid"></div>
+    <h3 class="theme-sub">Foto de fundo</h3>
+    <div class="event-form">
+      <input id="bg-file" class="bg-file" type="file" accept="image/*">
+      <label>Escurecer a foto <input id="bg-dim" type="range" min="0" max="80" step="5"></label>
+      <div class="modal-actions">
+        <button id="bg-remove" type="button">Remover foto</button>
+        <button type="button" class="primary" data-close="modal-theme">Pronto</button>
+      </div>
+    </div>
   </div>
 </div>
 <div id="modal-mover" class="modal" hidden>
@@ -3035,6 +3083,83 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
   sb.auth.getSession().then(({ data }) => {
     if (!data.session) showApp(false);
   });
+  // ---------- Temas e foto de fundo ----------
+  const THEMES = [
+    ["liquid", "Liquid Glass", "linear-gradient(135deg,#1d3a8a,#6b3fa0 60%,#f59e6b)"],
+    ["claro", "Vidro claro", "linear-gradient(135deg,#dfe9ff,#fbe7ff)"],
+    ["noite", "Noite", "linear-gradient(135deg,#060a16,#1d2b5c)"],
+    ["aurora", "Aurora", "linear-gradient(135deg,#053b35,#3b1d6e)"],
+    ["grafite", "Grafite", "linear-gradient(135deg,#0e0f12,#4a4e58)"],
+    ["poente", "Pôr do sol", "linear-gradient(135deg,#2a0f2e,#c2410c 70%,#f472b6)"],
+  ];
+  function renderThemeGrid() {
+    const g = $("theme-grid");
+    const cur = document.documentElement.dataset.tema || "liquid";
+    g.textContent = "";
+    THEMES.forEach(([id, name, grad]) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "theme-card";
+      b.setAttribute("aria-pressed", String(cur === id));
+      const prev = document.createElement("span");
+      prev.className = "theme-prev";
+      prev.style.background = grad;
+      const lbl = document.createElement("b");
+      lbl.textContent = name;
+      b.append(prev, lbl);
+      b.addEventListener("click", () => {
+        document.documentElement.dataset.tema = id;
+        localStorage.setItem("planner-tema", id);
+        renderThemeGrid();
+      });
+      g.append(b);
+    });
+  }
+  function shrinkImage(file, max) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const src = URL.createObjectURL(file);
+      img.onload = () => {
+        const k = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * k);
+        c.height = Math.round(img.height * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(src);
+        resolve(c.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = () => { URL.revokeObjectURL(src); reject(new Error("imagem inválida")); };
+      img.src = src;
+    });
+  }
+  $("open-theme").addEventListener("click", () => {
+    renderThemeGrid();
+    $("bg-dim").value = String(Math.round(Number(localStorage.getItem("planner-bg-dim") || 35) / 5) * 5);
+    openModal("modal-theme", "Temas");
+  });
+  $("bg-file").addEventListener("change", async (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    try {
+      const url = await shrinkImage(f, 1920);
+      localStorage.setItem("planner-bg", url);
+      document.documentElement.style.setProperty("--bg-photo", 'url("' + url + '")');
+      document.documentElement.dataset.bg = "1";
+    } catch (err) {
+      setStatus("Não foi possível usar essa imagem");
+    }
+    e.target.value = "";
+  });
+  $("bg-dim").addEventListener("input", (e) => {
+    localStorage.setItem("planner-bg-dim", e.target.value);
+    document.documentElement.style.setProperty("--bg-dim", String(Number(e.target.value) / 100));
+  });
+  $("bg-remove").addEventListener("click", () => {
+    localStorage.removeItem("planner-bg");
+    delete document.documentElement.dataset.bg;
+    document.documentElement.style.removeProperty("--bg-photo");
+  });
+
   // ---------- Estado do cartão por dia (Fup, pausa) ----------
   function startOnCurrent(ev) { return !!ev && (ev.starts_on === currentDay || !ev.starts_on); }
   async function seedCardState(day, id, state) {
