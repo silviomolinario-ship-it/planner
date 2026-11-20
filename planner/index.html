@@ -1224,6 +1224,12 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
   .mo-chip, .mo-more { display: none; }
   .mo-count { display: block; }
 }
+/* Exclusão no Kanban */
+.kb-mvrow { display: flex; align-items: center; gap: 4px; margin-top: 6px; }
+.kb-mvrow .kb-move { flex: 1 1 auto; min-width: 0; width: auto; margin-top: 0; }
+html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
+.kb-btn.del { flex: 0 0 auto; width: 26px; height: 26px; min-height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; border-radius: 8px; background: rgba(248,113,113,.14); border: 1px solid rgba(248,113,113,.4); }
+.kb-clear { margin-left: auto; font: inherit; font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 8px; color: inherit; background: rgba(248,113,113,.14); border: 1px solid rgba(248,113,113,.4); cursor: pointer; }
 </style>
 
 <main>
@@ -1258,7 +1264,7 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-20-1810</span>
+      <span class="status" title="versão desta página">v.2026-11-20-1830</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -3776,9 +3782,52 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
       mv.append(o);
     });
     mv.addEventListener("change", () => { if (mv.value) kbMove(ev, mv.value); });
-    mv.style.marginTop = "6px";
-    card.append(grip, title, meta, subInfo, bar, foot, actions, mv);
+    const mvRow = document.createElement("div");
+    mvRow.className = "kb-mvrow";
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "kb-btn del";
+    del.textContent = "🗑";
+    del.title = "Excluir tarefa";
+    del.setAttribute("aria-label", "Excluir tarefa");
+    del.addEventListener("click", () => kbDelete(ev));
+    mvRow.append(mv, del);
+    card.append(grip, title, meta, subInfo, bar, foot, actions, mvRow);
     return card;
+  }
+  // Exclui a tarefa (e as subtarefas criadas a partir dela)
+  async function removeEventRows(list) {
+    const ids = [];
+    list.forEach((ev) => {
+      ids.push(ev.id);
+      subsOf(ev).forEach((x) => { if (x.child_id) ids.push(x.child_id); });
+    });
+    for (const id of ids) {
+      const { error } = await sb.from("planner_events").delete().eq("id", id);
+      if (error) throw error;
+    }
+    await loadEvents();
+  }
+  async function kbDelete(ev) {
+    const rec = ev.repeat_rule && ev.repeat_rule !== "none";
+    const msg = 'Excluir "' + ev.title + '"?' + (rec ? " A série inteira (todas as ocorrências) será excluída." : "");
+    if (!window.confirm(msg)) return;
+    try {
+      await removeEventRows([ev]);
+      setStatus("Tarefa excluída");
+    } catch (err) {
+      setStatus("Não foi possível excluir a tarefa");
+    }
+  }
+  async function kbClearDeclined(list) {
+    if (!list.length) return;
+    if (!window.confirm("Excluir as " + list.length + " tarefas do Declined?")) return;
+    try {
+      await removeEventRows(list);
+      setStatus("Declined limpo");
+    } catch (err) {
+      setStatus("Não foi possível excluir as tarefas");
+    }
   }
   function toMin(hm) { const [h, m] = hm.split(":").map(Number); return h * 60 + m; }
 
@@ -3910,6 +3959,14 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
       head.innerHTML = '<span class="kb-dot" style="background:' + color + '"></span><b></b><i></i>';
       head.querySelector("b").textContent = title;
       head.querySelector("i").textContent = cols[key].length;
+      if (key === "canceladas" && cols[key].length) {
+        const clr = document.createElement("button");
+        clr.type = "button";
+        clr.className = "kb-clear";
+        clr.textContent = "Excluir todas";
+        clr.addEventListener("click", () => kbClearDeclined(cols.canceladas));
+        head.append(clr);
+      }
       const wrap = document.createElement("div");
       wrap.className = "kb-cards";
       if (!cols[key].length) {
