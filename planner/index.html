@@ -1216,7 +1216,7 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-20-1345</span>
+      <span class="status" title="versão desta página">v.2026-11-20-1730</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -1635,6 +1635,47 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
     if (checked) doneEvents[ev.id] = true; else delete doneEvents[ev.id];
     scheduleSave();
     renderEvents();
+    syncParentSub(ev.id, !!checked);
+  }
+  // Concluir a tarefa criada a partir de uma subtarefa dá baixa na subtarefa da tarefa principal
+  function syncParentSub(childId, done) {
+    const parent = events.find((p) => subsOf(p).some((x) => x.child_id === childId));
+    if (!parent) return;
+    const list = subsOf(parent).map((x) => (x.child_id === childId ? Object.assign({}, x, { done: done }) : x));
+    updateEventFields(parent, { subtasks: list });
+  }
+  // Cada subtarefa vira uma tarefa na data informada
+  async function syncChildren(subs, oldSubs, base) {
+    const keep = new Set(subs.map((x) => x.child_id).filter(Boolean));
+    const removed = oldSubs.map((x) => x.child_id).filter((id) => id && !keep.has(id));
+    if (removed.length) {
+      const { error } = await sb.from("planner_events").delete().in("id", removed);
+      if (error) throw error;
+    }
+    for (const sub of subs) {
+      const row = {
+        user_id: base.user_id,
+        category_id: base.category_id,
+        subcategory_id: base.subcategory_id,
+        kind: base.kind,
+        title: sub.title,
+        starts_on: sub.starts_on || base.starts_on,
+        ends_on: sub.ends_on || sub.starts_on || base.starts_on,
+        start_time: sub.start_time || base.start_time,
+        end_time: sub.end_time || base.end_time,
+        repeat_rule: "none",
+        is_priority: false,
+        priority_level: null
+      };
+      if (sub.child_id) {
+        const { error } = await sb.from("planner_events").update(row).eq("id", sub.child_id);
+        if (error) throw error;
+      } else {
+        const res = await sb.from("planner_events").insert(row).select("id").single();
+        if (res.error) throw res.error;
+        sub.child_id = Array.isArray(res.data) ? res.data[0].id : res.data.id;
+      }
+    }
   }
 
   // Bloco de compromisso dentro de uma linha de hora
@@ -2212,7 +2253,19 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
         is_priority: isPrio,
         priority_level: isPrio ? level : null
       };
-      const hadSubs = editingId && subsOf(events.find((x) => x.id === editingId) || {}).length > 0;
+      const oldSubs = editingId ? subsOf(events.find((x) => x.id === editingId) || {}) : [];
+      if (subs.length || oldSubs.length) {
+        await syncChildren(subs, oldSubs, {
+          user_id: fields.user_id,
+          category_id: fields.category_id,
+          subcategory_id: fields.subcategory_id,
+          kind: fields.kind,
+          starts_on: startDate,
+          start_time: fields.start_time,
+          end_time: fields.end_time
+        });
+      }
+      const hadSubs = oldSubs.length > 0;
       if (subs.length || hadSubs) fields.subtasks = subs;
       let savedId = editingId;
       let error = null;
@@ -2251,6 +2304,11 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
 
   async function deleteEvent(ev) {
     try {
+      const kids = subsOf(ev).map((x) => x.child_id).filter(Boolean);
+      if (kids.length) {
+        const { error: kidErr } = await sb.from("planner_events").delete().in("id", kids);
+        if (kidErr) throw kidErr;
+      }
       const { error } = await sb.from("planner_events").delete().eq("id", ev.id);
       if (error) throw error;
       await loadEvents();
@@ -3286,6 +3344,7 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
     const row = document.createElement("div");
     row.className = "sub-row";
     row.dataset.done = sub && sub.done ? "1" : "";
+    row.dataset.child = sub && sub.child_id ? sub.child_id : "";
     row.innerHTML =
       '<input class="sub-title" type="text" placeholder="Subtarefa" aria-label="Título da subtarefa">' +
       '<div class="pair"><input class="sub-sd" type="date" aria-label="Data de início da subtarefa"><input class="sub-ed" type="date" aria-label="Data de fim da subtarefa"></div>' +
@@ -3317,7 +3376,8 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
         ends_on: g(".sub-ed") || null,
         start_time: g(".sub-st") || null,
         end_time: g(".sub-et") || null,
-        done: row.dataset.done === "1"
+        done: row.dataset.done === "1",
+        child_id: row.dataset.child || null
       };
     }).filter((x) => x.title);
   }
