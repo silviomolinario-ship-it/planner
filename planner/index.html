@@ -1195,6 +1195,35 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
 .cl-add { display: flex; gap: 8px; margin-top: 4px; }
 .cl-add input { flex: 1; min-height: 40px; }
 .cl-add button { min-height: 40px; }
+/* ---------- Visões semanal e mensal ---------- */
+.period .per-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.period .per-head h2 { margin: 0; text-transform: capitalize; font-size: 18px; }
+.period .per-head .ghost { min-width: 40px; min-height: 40px; font-size: 18px; }
+.week-grid { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 8px; align-items: start; margin-top: 10px; }
+.wk-col { display: grid; gap: 6px; align-content: start; min-width: 0; padding: 8px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+.wk-col.today { border-color: var(--accent); }
+.wk-head { font: inherit; font-size: 13px; font-weight: 700; color: inherit; background: none; border: 0; padding: 4px 2px; text-align: left; cursor: pointer; }
+.wk-item { font: inherit; font-size: 12px; line-height: 1.3; text-align: left; color: inherit; padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.06); border: 0; border-left: 3px solid var(--cat, #7dd3fc); cursor: pointer; overflow-wrap: anywhere; min-width: 0; }
+.wk-item .tm { display: block; color: var(--muted); font-size: 11px; }
+.wk-item.done { opacity: .55; text-decoration: line-through; }
+.month-grid { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 6px; margin-top: 10px; }
+.mo-wd { font-size: 11px; font-weight: 700; color: var(--muted); text-align: center; padding: 4px 0; }
+.mo-cell { display: grid; align-content: start; gap: 3px; min-height: 96px; min-width: 0; padding: 6px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line); color: inherit; font: inherit; text-align: left; cursor: pointer; overflow: hidden; }
+.mo-cell.out { opacity: .4; }
+.mo-cell.today { border-color: var(--accent); }
+.mo-num { font-size: 12px; font-weight: 700; }
+.mo-count { display: none; font-size: 10px; color: var(--muted); }
+.mo-chip { font-size: 10.5px; line-height: 1.2; padding: 2px 5px; border-radius: 6px; background: color-mix(in srgb, var(--cat, #7dd3fc) 28%, transparent); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mo-chip.done { opacity: .55; text-decoration: line-through; }
+.mo-more { font-size: 10px; color: var(--muted); }
+@media (max-width: 899px) { .week-grid { grid-template-columns: repeat(7, minmax(120px,1fr)); overflow-x: auto; } }
+@media (max-width: 599px) {
+  .week-grid { grid-template-columns: 1fr; overflow: visible; }
+  .wk-col { grid-template-columns: 1fr; }
+  .mo-cell { min-height: 54px; padding: 4px; }
+  .mo-chip, .mo-more { display: none; }
+  .mo-count { display: block; }
+}
 </style>
 
 <main>
@@ -1229,7 +1258,7 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-20-1755</span>
+      <span class="status" title="versão desta página">v.2026-11-20-1810</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -1243,6 +1272,8 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
       <button type="button" data-toggle="notas" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg><span>Notas</span></button>
       <button type="button" data-toggle="backlog" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Backlog</span></button>
       <button type="button" data-toggle="kanban" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="13" rx="1"/></svg><span>Kanban</span></button>
+      <button type="button" data-toggle="semana" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M7 13h2M11 13h2M15 13h2M7 17h2M11 17h2"/></svg><span>Semana</span></button>
+      <button type="button" data-toggle="mes" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><circle cx="8" cy="14" r="1"/><circle cx="12" cy="14" r="1"/><circle cx="16" cy="14" r="1"/><circle cx="8" cy="18" r="1"/><circle cx="12" cy="18" r="1"/></svg><span>Mês</span></button>
       <button id="open-dash" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>Dashboard</span></button>
       <button id="open-cats" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span>Categorias</span></button>
       <button id="open-theme" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.7-.8 1.7-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H17a4 4 0 0 0 4-4c0-4.6-4-8.6-9-8.6z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7.5" r="1.2"/><circle cx="14.5" cy="7.5" r="1.2"/></svg><span>Temas</span></button>
@@ -1297,6 +1328,16 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
 
         </section>
 
+        <section class="card period" data-panel="semana" hidden>
+          <div class="per-head"><button type="button" class="ghost" data-nav="-1" data-kind="semana" aria-label="Anterior">‹</button><h2 id="per-title-semana">Semana</h2><button type="button" class="ghost" data-nav="1" data-kind="semana" aria-label="Próximo">›</button></div>
+          <div id="per-kpi-semana" class="kb-kpis"></div>
+          <div id="per-body-semana" class="week-grid"></div>
+        </section>
+        <section class="card period" data-panel="mes" hidden>
+          <div class="per-head"><button type="button" class="ghost" data-nav="-1" data-kind="mes" aria-label="Anterior">‹</button><h2 id="per-title-mes">Mês</h2><button type="button" class="ghost" data-nav="1" data-kind="mes" aria-label="Próximo">›</button></div>
+          <div id="per-kpi-mes" class="kb-kpis"></div>
+          <div id="per-body-mes" class="month-grid"></div>
+        </section>
         <section class="card kanban-card" data-panel="kanban" hidden>
           <div class="kb-head"><h2>Kanban do dia</h2><button id="kb-new" class="primary" type="button">+ Nova tarefa</button></div>
           <div id="kb-kpis" class="kb-kpis"></div>
@@ -3452,6 +3493,180 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
     updateEventFields(ev, { subtasks: list });
   }
 
+  // ---------- Visões semanal e mensal ----------
+  let periodCursor = null;
+  const periodCache = {};
+  const WD_NAMES = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+  const ymdOf = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const addDaysTo = (day, n) => { const d = new Date(day + "T12:00:00"); d.setDate(d.getDate() + n); return ymdOf(d); };
+  function weekDaysOf(day) {
+    const dow = (new Date(day + "T12:00:00").getDay() + 6) % 7;
+    const mon = addDaysTo(day, -dow);
+    return Array.from({ length: 7 }, (_, i) => addDaysTo(mon, i));
+  }
+  function monthDaysOf(day) {
+    const d = new Date(day + "T12:00:00");
+    const first = ymdOf(new Date(d.getFullYear(), d.getMonth(), 1, 12));
+    const dow = (new Date(d.getFullYear(), d.getMonth(), 1, 12).getDay() + 6) % 7;
+    const start = addDaysTo(first, -dow);
+    return Array.from({ length: 42 }, (_, i) => addDaysTo(start, i));
+  }
+  function periodDaysOf(kind) { return kind === "semana" ? weekDaysOf(periodCursor) : monthDaysOf(periodCursor); }
+  function dayDataOf(day) {
+    if (day === currentDay) return { doneEvents: doneEvents, movedOut: movedOut, movedIn: movedIn };
+    return periodCache[day] || {};
+  }
+  function eventsOnDay(day) {
+    const dd = dayDataOf(day);
+    return events
+      .filter((ev) => (occurs(ev, day) && !(dd.movedOut || {})[ev.id]) || !!(dd.movedIn || {})[ev.id])
+      .sort((a, b) => a.start_time.localeCompare(b.start_time));
+  }
+  function isDoneOnDay(day, ev) { return !!((dayDataOf(day).doneEvents || {})[ev.id]); }
+  async function loadPeriodCache(days) {
+    try {
+      const { data, error } = await sb.from("planner_days").select("day,data").gte("day", days[0]).lte("day", days[days.length - 1]);
+      if (error) throw error;
+      (data || []).forEach((r) => { periodCache[r.day] = r.data || {}; });
+    } catch (e) {
+      // sem histórico de conclusão: a visão mostra só o que foi planejado
+    }
+  }
+  function periodKpis(kind, items) {
+    const kpi = $("per-kpi-" + kind);
+    kpi.textContent = "";
+    items.forEach(([label, value]) => {
+      const k = document.createElement("div");
+      k.className = "kb-kpi";
+      k.innerHTML = "<small></small><strong></strong>";
+      k.querySelector("small").textContent = label;
+      k.querySelector("strong").textContent = value;
+      kpi.append(k);
+    });
+  }
+  function goToDay(day) {
+    $("date").value = day;
+    $("date").dispatchEvent(new Event("change"));
+    openPanels.filter((k) => k === "semana" || k === "mes").forEach((k) => {
+      const t = document.querySelector('[data-toggle="' + k + '"]');
+      if (t) t.click();
+    });
+  }
+  function renderPeriod(kind) {
+    if (!openPanels.includes(kind) || !periodCursor) return;
+    const days = periodDaysOf(kind);
+    const body = $("per-body-" + kind);
+    body.textContent = "";
+    let total = 0, done = 0;
+    const counted = kind === "semana" ? days : days.filter((d) => d.slice(0, 7) === periodCursor.slice(0, 7));
+    counted.forEach((day) => eventsOnDay(day).forEach((ev) => { total++; if (isDoneOnDay(day, ev)) done++; }));
+    if (kind === "semana") {
+      const a = new Date(days[0] + "T12:00:00"), z = new Date(days[6] + "T12:00:00");
+      $("per-title-semana").textContent = a.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) + " – " + z.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+    } else {
+      $("per-title-mes").textContent = new Date(periodCursor + "T12:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    }
+    periodKpis(kind, [
+      ["Atividades", String(total)],
+      ["Concluídas", done + " de " + total],
+    ]);
+    if (kind === "semana") {
+      days.forEach((day, i) => {
+        const col = document.createElement("div");
+        col.className = "wk-col" + (day === todayStr() ? " today" : "");
+        const head = document.createElement("button");
+        head.type = "button";
+        head.className = "wk-head";
+        head.textContent = WD_NAMES[i] + " " + Number(day.slice(8, 10));
+        head.addEventListener("click", () => goToDay(day));
+        col.append(head);
+        const list = eventsOnDay(day);
+        if (!list.length) {
+          const e = document.createElement("p");
+          e.className = "kb-empty";
+          e.textContent = "—";
+          col.append(e);
+        }
+        list.forEach((ev) => {
+          const it = document.createElement("button");
+          it.type = "button";
+          const isD = isDoneOnDay(day, ev);
+          it.className = "wk-item" + (isD ? " done" : "");
+          const cat = catById(ev.category_id);
+          it.style.setProperty("--cat", cat ? cat.color : "#7dd3fc");
+          const tm = document.createElement("span");
+          tm.className = "tm";
+          tm.textContent = ev.start_time.slice(0, 5) + (isD ? " ✓" : "");
+          it.append(tm, document.createTextNode(ev.title));
+          it.addEventListener("click", () => goToDay(day));
+          col.append(it);
+        });
+        body.append(col);
+      });
+    } else {
+      WD_NAMES.forEach((n) => {
+        const h = document.createElement("div");
+        h.className = "mo-wd";
+        h.textContent = n;
+        body.append(h);
+      });
+      days.forEach((day) => {
+        const list = eventsOnDay(day);
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "mo-cell" + (day.slice(0, 7) !== periodCursor.slice(0, 7) ? " out" : "") + (day === todayStr() ? " today" : "");
+        const num = document.createElement("span");
+        num.className = "mo-num";
+        num.textContent = Number(day.slice(8, 10));
+        const cnt = document.createElement("span");
+        cnt.className = "mo-count";
+        cnt.textContent = list.length ? list.length + (list.length === 1 ? " atividade" : " atividades") : "";
+        cell.append(num, cnt);
+        list.slice(0, 3).forEach((ev) => {
+          const chip = document.createElement("span");
+          const isD = isDoneOnDay(day, ev);
+          chip.className = "mo-chip" + (isD ? " done" : "");
+          const cat = catById(ev.category_id);
+          chip.style.setProperty("--cat", cat ? cat.color : "#7dd3fc");
+          chip.textContent = ev.start_time.slice(0, 5) + " " + ev.title;
+          cell.append(chip);
+        });
+        if (list.length > 3) {
+          const more = document.createElement("span");
+          more.className = "mo-more";
+          more.textContent = "+" + (list.length - 3) + " mais";
+          cell.append(more);
+        }
+        cell.addEventListener("click", () => goToDay(day));
+        body.append(cell);
+      });
+    }
+  }
+  async function refreshPeriod(kind) {
+    if (!periodCursor) periodCursor = currentDay;
+    await loadPeriodCache(periodDaysOf(kind));
+    renderPeriod(kind);
+  }
+  ["semana", "mes"].forEach((kind) => {
+    const t = document.querySelector('[data-toggle="' + kind + '"]');
+    if (t) t.addEventListener("click", () => { periodCursor = currentDay; refreshPeriod(kind); });
+  });
+  document.querySelectorAll("[data-nav]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const kind = b.dataset.kind;
+      const step = Number(b.dataset.nav);
+      if (kind === "semana") {
+        periodCursor = addDaysTo(periodCursor, step * 7);
+      } else {
+        const d = new Date(periodCursor + "T12:00:00");
+        d.setDate(1);
+        d.setMonth(d.getMonth() + step);
+        periodCursor = ymdOf(d);
+      }
+      refreshPeriod(kind);
+    });
+  });
+
   // ---------- Kanban do dia ----------
   const KB_COLS = [["todo", "To do"], ["doing", "Doing"], ["priority", "Priority"], ["reunioes", "Reuniões"], ["fup", "Fup"], ["done", "Done"], ["canceladas", "Declined"]];
   function kbStatus(ev) {
@@ -3717,7 +3932,7 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
   });
   $("sub-add").addEventListener("click", () => addSubRow(null));
   const _renderEventsBase = renderEvents;
-  renderEvents = function () { _renderEventsBase(); renderKanban(); };
+  renderEvents = function () { _renderEventsBase(); renderKanban(); renderPeriod("semana"); renderPeriod("mes"); };
   setInterval(() => { if (openPanels.includes("kanban")) renderKanban(); }, 15000);
 
 
