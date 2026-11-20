@@ -1163,6 +1163,25 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
 .theme-sub { margin: 6px 0 4px; font-size: 15px; }
 .bg-file { width: 100%; min-height: 44px; font-size: 14px; }
 @media (max-width: 599px) { .theme-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+/* ---------- Liquid Glass com cores escolhidas ---------- */
+:root { --lq-top:#0a1030; --lq-mid:#131a3a; --lq-base:#2b2544; --lq-glow:#ffa440; --lq-glow2:#2660dc; --lq-accent:#2f9bff; }
+:root:not([data-tema]) body, :root[data-tema="liquid"] body {
+  background:
+    radial-gradient(860px 560px at 88% 112%, color-mix(in srgb, var(--lq-glow) 55%, transparent) 0%, color-mix(in srgb, var(--lq-glow) 18%, transparent) 38%, transparent 66%),
+    radial-gradient(760px 520px at -6% -10%, color-mix(in srgb, var(--lq-glow2) 45%, transparent) 0%, transparent 62%),
+    radial-gradient(640px 420px at 60% 40%, color-mix(in srgb, var(--lq-glow2) 22%, transparent) 0%, transparent 70%),
+    linear-gradient(180deg, var(--lq-top) 0%, var(--lq-mid) 58%, var(--lq-base) 100%);
+}
+:root:not([data-tema]), :root[data-tema="liquid"] { --accent: var(--lq-accent); --accent-hover: var(--lq-accent); --accent-soft: color-mix(in srgb, var(--lq-accent) 18%, transparent); }
+.lq-pickers { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-bottom: 10px; }
+.lq-pickers label { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 13px; }
+.lq-pickers input[type="color"] { width: 44px; height: 30px; padding: 0; border: none; background: none; cursor: pointer; }
+.lq-reset { margin-bottom: 8px; }
+:root:not([data-tema]) .panel-menu button[aria-pressed="true"], :root[data-tema="liquid"] .panel-menu button[aria-pressed="true"],
+:root:not([data-tema]) button.primary, :root[data-tema="liquid"] button.primary {
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 65%, #ffffff));
+}
+@media (max-width: 599px) { .lq-pickers { grid-template-columns: repeat(2, minmax(0,1fr)); } }
 </style>
 
 <main>
@@ -1183,7 +1202,7 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
     <p id="auth-msg" role="status"></p>
   </section>
 
-  <script>try{var d=document.documentElement,t=localStorage.getItem('planner-tema');if(t)d.dataset.tema=t;var b=localStorage.getItem('planner-bg');if(b){d.dataset.bg='1';d.style.setProperty('--bg-photo','url("'+b+'")');}var g=localStorage.getItem('planner-bg-dim');if(g)d.style.setProperty('--bg-dim',(+g)/100);}catch(e){}</script>
+  <script>try{var d=document.documentElement,t=localStorage.getItem('planner-tema');if(t)d.dataset.tema=t;var b=localStorage.getItem('planner-bg');if(b){d.dataset.bg='1';d.style.setProperty('--bg-photo','url("'+b+'")');}var L=localStorage.getItem('planner-liquid');if(L){var o=JSON.parse(L);for(var k in o)d.style.setProperty('--lq-'+k,o[k]);}var g=localStorage.getItem('planner-bg-dim');if(g)d.style.setProperty('--bg-dim',(+g)/100);}catch(e){}</script>
 </head>
 <body>
 <section id="app" hidden>
@@ -1197,7 +1216,7 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-20-1320</span>
+      <span class="status" title="versão desta página">v.2026-11-20-1345</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -1379,6 +1398,17 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
   <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-theme-title">
     <div class="modal-head"><h2 id="modal-theme-title">Temas</h2><button type="button" class="modal-close" data-close="modal-theme" aria-label="Fechar">×</button></div>
     <div id="theme-grid" class="theme-grid"></div>
+    <h3 class="theme-sub">Cores do Liquid Glass</h3>
+    <div id="lq-presets" class="theme-grid"></div>
+    <div class="lq-pickers">
+      <label>Topo <input id="lq-top" type="color"></label>
+      <label>Meio <input id="lq-mid" type="color"></label>
+      <label>Base <input id="lq-base" type="color"></label>
+      <label>Brilho 1 <input id="lq-glow" type="color"></label>
+      <label>Brilho 2 <input id="lq-glow2" type="color"></label>
+      <label>Destaque <input id="lq-accent" type="color"></label>
+    </div>
+    <div class="modal-actions lq-reset"><button id="lq-reset" type="button">Restaurar Liquid Glass</button></div>
     <h3 class="theme-sub">Foto de fundo</h3>
     <div class="event-form">
       <input id="bg-file" class="bg-file" type="file" accept="image/*">
@@ -3115,6 +3145,59 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
       g.append(b);
     });
   }
+  const LQ_PRESETS = [
+    ["Padrão", { top: "#0a1030", mid: "#131a3a", base: "#2b2544", glow: "#ffa440", glow2: "#2660dc", accent: "#2f9bff" }],
+    ["Oceano", { top: "#04162e", mid: "#0a2a4f", base: "#0f4c6e", glow: "#22d3ee", glow2: "#1d4ed8", accent: "#22d3ee" }],
+    ["Floresta", { top: "#04211a", mid: "#0c3a2e", base: "#1b4d3e", glow: "#a3e635", glow2: "#10b981", accent: "#34d399" }],
+    ["Ametista", { top: "#1a0b33", mid: "#2a1450", base: "#3b1d6e", glow: "#f0abfc", glow2: "#7c3aed", accent: "#c084fc" }],
+    ["Brasa", { top: "#1f0a05", mid: "#3a1408", base: "#5b1d0c", glow: "#fb923c", glow2: "#dc2626", accent: "#fb923c" }],
+  ];
+  const LQ_DEFAULT = LQ_PRESETS[0][1];
+  let lq = Object.assign({}, LQ_DEFAULT, JSON.parse(localStorage.getItem("planner-liquid") || "{}"));
+  function applyLq(save) {
+    Object.keys(lq).forEach((k) => document.documentElement.style.setProperty("--lq-" + k, lq[k]));
+    if (save) localStorage.setItem("planner-liquid", JSON.stringify(lq));
+    syncLq();
+  }
+  function syncLq() {
+    Object.keys(lq).forEach((k) => { const el = $("lq-" + k); if (el) el.value = lq[k]; });
+  }
+  function pickLiquid(colors) {
+    lq = Object.assign({}, colors);
+    document.documentElement.dataset.tema = "liquid";
+    localStorage.setItem("planner-tema", "liquid");
+    applyLq(true);
+    renderThemeGrid();
+  }
+  function renderLqPresets() {
+    const g = $("lq-presets");
+    g.textContent = "";
+    LQ_PRESETS.forEach(([name, c]) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "theme-card";
+      const prev = document.createElement("span");
+      prev.className = "theme-prev";
+      prev.style.background = "radial-gradient(circle at 85% 100%, " + c.glow + ", transparent 60%), linear-gradient(135deg, " + c.top + ", " + c.base + ")";
+      const lbl = document.createElement("b");
+      lbl.textContent = name;
+      b.append(prev, lbl);
+      b.addEventListener("click", () => pickLiquid(c));
+      g.append(b);
+    });
+  }
+  Object.keys(LQ_DEFAULT).forEach((k) => {
+    const el = $("lq-" + k);
+    if (!el) return;
+    el.addEventListener("input", () => { lq[k] = el.value; pickLiquid(lq); });
+  });
+  $("lq-reset").addEventListener("click", () => {
+    localStorage.removeItem("planner-liquid");
+    lq = Object.assign({}, LQ_DEFAULT);
+    applyLq(false);
+    pickLiquid(lq);
+  });
+  applyLq(false);
   function shrinkImage(file, max) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -3134,6 +3217,8 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
   }
   $("open-theme").addEventListener("click", () => {
     renderThemeGrid();
+    renderLqPresets();
+    syncLq();
     $("bg-dim").value = String(Math.round(Number(localStorage.getItem("planner-bg-dim") || 35) / 5) * 5);
     openModal("modal-theme", "Temas");
   });
