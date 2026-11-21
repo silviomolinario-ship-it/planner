@@ -1237,6 +1237,22 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
   box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -1px 0 rgba(0,0,0,.18), 0 6px 14px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 :root button.primary:hover, :root .kb-btn.done:hover { filter: brightness(1.05); }
+/* ---------- Objetivos e projetos ---------- */
+.goal-form { display: grid; gap: 10px; margin: 10px 0 14px; }
+.goal-form label { display: grid; gap: 4px; font-size: 13px; }
+.goal-list { display: grid; gap: 12px; margin-top: 10px; }
+.goal-card { display: grid; gap: 10px; padding: 14px; border-radius: 16px; background: rgba(255,255,255,.05); border: 1px solid var(--line); }
+.goal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.goal-head b { display: block; font-size: 16px; }
+.goal-head small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.goal-status { min-height: 36px; padding: 4px 8px; border-radius: 10px; font: inherit; font-size: 13px; color: inherit; background: rgba(255,255,255,.08); border: 1px solid var(--line); }
+.proj-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,.04); }
+.proj-row span { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; }
+.goal-add { display: flex; gap: 8px; }
+.goal-add input { flex: 1; min-width: 0; min-height: 40px; }
+.goal-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.goal-mini { min-height: 32px; padding: 4px 10px; font-size: 12px; }
+.proj-tag { display: block; color: var(--muted); font-size: 11px; font-weight: 600; }
 </style>
 
 <main>
@@ -1271,7 +1287,7 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-20-1910</span>
+      <span class="status" title="versão desta página">v.2026-11-21-1730</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -1285,6 +1301,7 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
       <button type="button" data-toggle="notas" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg><span>Notas</span></button>
       <button type="button" data-toggle="backlog" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Backlog</span></button>
       <button type="button" data-toggle="kanban" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="13" rx="1"/></svg><span>Kanban</span></button>
+      <button type="button" data-toggle="objetivos" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg><span>Objetivos</span></button>
       <button type="button" data-toggle="semana" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M7 13h2M11 13h2M15 13h2M7 17h2M11 17h2"/></svg><span>Semana</span></button>
       <button type="button" data-toggle="mes" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><circle cx="8" cy="14" r="1"/><circle cx="12" cy="14" r="1"/><circle cx="16" cy="14" r="1"/><circle cx="8" cy="18" r="1"/><circle cx="12" cy="18" r="1"/></svg><span>Mês</span></button>
       <button id="open-dash" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>Dashboard</span></button>
@@ -1341,6 +1358,23 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
 
         </section>
 
+        <section class="card goals-card" data-panel="objetivos" hidden>
+          <div class="kb-head"><h2>Objetivos e projetos</h2><button id="goal-new" class="primary" type="button">+ Objetivo</button></div>
+          <form id="goal-form" class="goal-form" hidden>
+            <input id="goal-title" type="text" placeholder="Título do objetivo" aria-label="Título do objetivo" required>
+            <input id="goal-category" type="text" placeholder="Área da vida (ex.: Carreira, Saúde)" aria-label="Área da vida">
+            <label>Data alvo <input id="goal-target" type="date"></label>
+            <select id="goal-status" aria-label="Status">
+              <option value="Draft">Rascunho</option>
+              <option value="Active" selected>Ativo</option>
+              <option value="Paused">Pausado</option>
+              <option value="Completed">Concluído</option>
+              <option value="Archived">Arquivado</option>
+            </select>
+            <div class="modal-actions"><button id="goal-cancel" type="button" class="ghost">Cancelar</button><button type="submit" class="primary">Salvar objetivo</button></div>
+          </form>
+          <div id="goal-list" class="goal-list"></div>
+        </section>
         <section class="card period" data-panel="semana" hidden>
           <div class="per-head"><button type="button" class="ghost" data-nav="-1" data-kind="semana" aria-label="Anterior">‹</button><h2 id="per-title-semana">Semana</h2><button type="button" class="ghost" data-nav="1" data-kind="semana" aria-label="Próximo">›</button></div>
           <div id="per-kpi-semana" class="kb-kpis"></div>
@@ -1438,6 +1472,9 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
             </select>
             <select id="ev-subcategory" aria-label="Subcategoria">
               <option value="">Sem subcategoria</option>
+            </select>
+            <select id="ev-project" aria-label="Projeto">
+              <option value="">Sem projeto</option>
             </select>
             <select id="ev-kind" aria-label="Tipo">
               <option value="tarefa">Tarefa</option>
@@ -1843,6 +1880,16 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
       deleteEvent(ev);
     });
 
+    if (ev.project_id) {
+      const pj = projects.find((x) => x.id === ev.project_id);
+      const gl = pj ? goals.find((x) => x.id === pj.goal_id) : null;
+      if (pj) {
+        const tag = document.createElement("small");
+        tag.className = "proj-tag";
+        tag.textContent = (gl ? gl.title + " › " : "") + pj.title;
+        text.append(tag);
+      }
+    }
     if (subsOf(ev).length) {
       const sp = subPct(ev);
       const box = document.createElement("div");
@@ -2305,6 +2352,7 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
     $("ev-category").value = ev.category_id || "";
     renderSubSelect();
     $("ev-subcategory").value = ev.subcategory_id || "";
+    $("ev-project").value = ev.project_id || "";
     $("ev-priority").checked = !!ev.is_priority;
     $("ev-level").value = ev.priority_level || "normal";
     $("ev-level").hidden = !ev.is_priority;
@@ -2319,6 +2367,7 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
     editingId = null;
     $("event-form").reset();
     $("ev-fup").checked = false;
+    $("ev-project").value = "";
     $("sub-list").textContent = "";
     renderSubSelect();
     $("ev-startdate").value = todayStr();
@@ -2362,6 +2411,9 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
         is_priority: isPrio,
         priority_level: isPrio ? level : null
       };
+      const projVal = $("ev-project").value || null;
+      const oldProj = editingId ? ((events.find((x) => x.id === editingId) || {}).project_id || null) : null;
+      if (projVal || oldProj) fields.project_id = projVal;
       const oldSubs = editingId ? subsOf(events.find((x) => x.id === editingId) || {}) : [];
       if (subs.length || oldSubs.length) {
         await syncChildren(subs, oldSubs, {
@@ -3267,6 +3319,7 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
     showApp(true);
     loadCategories();
     loadSubcats();
+    loadGoals();
     loadEvents();
     loadDay(currentDay);
     loadBacklog();
@@ -3505,6 +3558,228 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
     const list = subsOf(ev).map((x, j) => (j === i ? Object.assign({}, x, { done: checked }) : x));
     updateEventFields(ev, { subtasks: list });
   }
+
+  // ---------- Objetivos e projetos (Objetivo → Projeto → Tarefa) ----------
+  let goals = [], projects = [], goalEditingId = null, goalsReady = true;
+  const GOAL_STATUS = ["Draft", "Active", "Paused", "Completed", "Archived"];
+  const GOAL_STATUS_PT = { Draft: "Rascunho", Active: "Ativo", Paused: "Pausado", Completed: "Concluído", Archived: "Arquivado" };
+  async function loadGoals() {
+    try {
+      const g = await sb.from("goals").select("*").order("created_at", { ascending: true });
+      if (g.error) throw g.error;
+      const p = await sb.from("projects").select("*").order("created_at", { ascending: true });
+      if (p.error) throw p.error;
+      goals = g.data || [];
+      projects = p.data || [];
+      goalsReady = true;
+    } catch (e) {
+      goalsReady = false;
+    }
+    renderProjectSelect();
+    renderGoals();
+  }
+  function renderProjectSelect() {
+    const sel = $("ev-project");
+    if (!sel) return;
+    const cur = sel.value;
+    sel.textContent = "";
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "Sem projeto";
+    sel.append(none);
+    projects.forEach((p) => {
+      const g = goals.find((x) => x.id === p.goal_id);
+      const o = document.createElement("option");
+      o.value = p.id;
+      o.textContent = (g ? g.title + " › " : "") + p.title;
+      sel.append(o);
+    });
+    sel.value = cur;
+  }
+  function goalStatusSelect(value, onChange) {
+    const sel = document.createElement("select");
+    sel.className = "goal-status";
+    sel.setAttribute("aria-label", "Status");
+    GOAL_STATUS.forEach((st) => {
+      const o = document.createElement("option");
+      o.value = st;
+      o.textContent = GOAL_STATUS_PT[st];
+      if (st === value) o.selected = true;
+      sel.append(o);
+    });
+    sel.addEventListener("change", () => onChange(sel.value));
+    return sel;
+  }
+  async function updateRow(table, row, patch) {
+    Object.assign(row, patch);
+    renderGoals();
+    renderProjectSelect();
+    const { error } = await sb.from(table).update(patch).eq("id", row.id);
+    if (error) {
+      setStatus("Não foi possível salvar");
+      loadGoals();
+    }
+  }
+  async function addProject(g, title) {
+    try {
+      const { data: u } = await sb.auth.getUser();
+      const { error } = await sb.from("projects").insert({ user_id: u.user.id, goal_id: g.id, title: title });
+      if (error) throw error;
+      await loadGoals();
+    } catch (e) {
+      setStatus("Não foi possível criar o projeto");
+    }
+  }
+  async function deleteGoalRow(g) {
+    if (!window.confirm('Excluir o objetivo "' + g.title + '" e seus projetos? As tarefas ficam sem projeto.')) return;
+    try {
+      const { error } = await sb.from("goals").delete().eq("id", g.id);
+      if (error) throw error;
+      await loadGoals();
+      await loadEvents();
+    } catch (e) {
+      setStatus("Não foi possível excluir o objetivo");
+    }
+  }
+  async function deleteProjectRow(p) {
+    if (!window.confirm('Excluir o projeto "' + p.title + '"? As tarefas ficam sem projeto.')) return;
+    try {
+      const { error } = await sb.from("projects").delete().eq("id", p.id);
+      if (error) throw error;
+      await loadGoals();
+      await loadEvents();
+    } catch (e) {
+      setStatus("Não foi possível excluir o projeto");
+    }
+  }
+  function openGoalForm(g) {
+    goalEditingId = g ? g.id : null;
+    $("goal-title").value = g ? g.title : "";
+    $("goal-category").value = g ? (g.category || "") : "";
+    $("goal-target").value = g ? (g.target_date || "") : "";
+    $("goal-status").value = g ? g.status : "Active";
+    $("goal-form").hidden = false;
+    $("goal-title").focus();
+  }
+  function closeGoalForm() {
+    goalEditingId = null;
+    $("goal-form").hidden = true;
+    $("goal-form").reset();
+  }
+  function renderGoals() {
+    const list = $("goal-list");
+    if (!list) return;
+    list.textContent = "";
+    if (!goalsReady) {
+      const p = document.createElement("p");
+      p.className = "kb-empty";
+      p.textContent = "Para usar Objetivos, rode o SQL da seção Objetivos no Supabase.";
+      list.append(p);
+      return;
+    }
+    if (!goals.length) {
+      const p = document.createElement("p");
+      p.className = "kb-empty";
+      p.textContent = "Nenhum objetivo ainda. Crie o primeiro.";
+      list.append(p);
+      return;
+    }
+    goals.forEach((g) => {
+      const card = document.createElement("article");
+      card.className = "goal-card";
+      const head = document.createElement("div");
+      head.className = "goal-head";
+      const t = document.createElement("div");
+      const b = document.createElement("b");
+      b.textContent = g.title;
+      const sm = document.createElement("small");
+      sm.textContent = [g.category, g.target_date ? "meta " + fmtSubDate(g.target_date) : ""].filter(Boolean).join(" · ");
+      t.append(b, sm);
+      head.append(t, goalStatusSelect(g.status, (v) => updateRow("goals", g, { status: v })));
+      card.append(head);
+
+      const mine = projects.filter((p) => p.goal_id === g.id);
+      const doneCount = mine.filter((p) => p.status === "Completed").length;
+      const pct = mine.length ? Math.round(doneCount / mine.length * 100) : 0;
+      const pr = document.createElement("div");
+      pr.className = "cl-pct-row";
+      const pc = document.createElement("span");
+      pc.textContent = mine.length ? doneCount + "/" + mine.length + " projetos · " + pct + "%" : "Sem projetos";
+      const bar = document.createElement("div");
+      bar.className = "kb-bar";
+      bar.innerHTML = '<span style="width:' + pct + '%"></span>';
+      pr.append(pc, bar);
+      card.append(pr);
+
+      mine.forEach((p) => {
+        const row = document.createElement("div");
+        row.className = "proj-row";
+        const name = document.createElement("span");
+        name.textContent = p.title;
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "ghost goal-mini";
+        del.textContent = "Excluir";
+        del.addEventListener("click", () => deleteProjectRow(p));
+        row.append(name, goalStatusSelect(p.status, (v) => updateRow("projects", p, { status: v })), del);
+        card.append(row);
+      });
+
+      const add = document.createElement("form");
+      add.className = "goal-add";
+      add.innerHTML = '<input type="text" placeholder="Novo projeto" aria-label="Novo projeto"><button type="submit" class="ghost">Adicionar projeto</button>';
+      add.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const inp = add.querySelector("input");
+        const title = inp.value.trim();
+        if (!title) return;
+        inp.value = "";
+        addProject(g, title);
+      });
+      card.append(add);
+
+      const actions = document.createElement("div");
+      actions.className = "goal-actions";
+      const ed = document.createElement("button");
+      ed.type = "button";
+      ed.className = "ghost goal-mini";
+      ed.textContent = "Editar objetivo";
+      ed.addEventListener("click", () => openGoalForm(g));
+      const rm = document.createElement("button");
+      rm.type = "button";
+      rm.className = "ghost goal-mini";
+      rm.textContent = "Excluir objetivo";
+      rm.addEventListener("click", () => deleteGoalRow(g));
+      actions.append(ed, rm);
+      card.append(actions);
+      list.append(card);
+    });
+  }
+  $("goal-new").addEventListener("click", () => openGoalForm(null));
+  $("goal-cancel").addEventListener("click", closeGoalForm);
+  $("goal-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = $("goal-title").value.trim();
+    if (!title) return;
+    const fields = {
+      title: title,
+      category: $("goal-category").value.trim() || null,
+      target_date: $("goal-target").value || null,
+      status: $("goal-status").value
+    };
+    try {
+      const { data: u } = await sb.auth.getUser();
+      const { error } = goalEditingId
+        ? await sb.from("goals").update(fields).eq("id", goalEditingId)
+        : await sb.from("goals").insert(Object.assign({ user_id: u.user.id }, fields));
+      if (error) throw error;
+      closeGoalForm();
+      await loadGoals();
+    } catch (err) {
+      setStatus("Não foi possível salvar o objetivo");
+    }
+  });
+  document.querySelector('[data-toggle="objetivos"]').addEventListener("click", () => loadGoals());
 
   // ---------- Visões semanal e mensal ----------
   let periodCursor = null;
