@@ -1196,6 +1196,7 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
 .period .per-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 .period .per-head h2 { margin: 0; text-transform: capitalize; font-size: 18px; }
 .period .per-head .ghost { min-width: 40px; min-height: 40px; font-size: 18px; }
+.period .per-actions { display: flex; justify-content: flex-end; margin-bottom: 10px; }
 .week-grid { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 8px; align-items: start; margin-top: 10px; }
 .wk-col { display: grid; gap: 6px; align-content: start; min-width: 0; padding: 8px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
 .wk-col.today { border-color: var(--accent); }
@@ -1287,7 +1288,7 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-21-1730</span>
+      <span class="status" title="versão desta página">v.2026-11-22-1430</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -1377,6 +1378,7 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
         </section>
         <section class="card period" data-panel="semana" hidden>
           <div class="per-head"><button type="button" class="ghost" data-nav="-1" data-kind="semana" aria-label="Anterior">‹</button><h2 id="per-title-semana">Semana</h2><button type="button" class="ghost" data-nav="1" data-kind="semana" aria-label="Próximo">›</button></div>
+          <div class="per-actions"><button id="wk-new" class="primary" type="button">+ Nova tarefa</button></div>
           <div id="per-kpi-semana" class="kb-kpis"></div>
           <div id="per-body-semana" class="week-grid"></div>
         </section>
@@ -4263,6 +4265,13 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
     });
   }
   $("kb-new").addEventListener("click", () => {
+    resetForm();
+    $("ev-startdate").value = currentDay;
+    $("ev-enddate").value = currentDay;
+    $("ev-start").value = nowHour();
+    openModal("modal-tarefa", "Nova tarefa");
+  });
+  $("wk-new").addEventListener("click", () => {
     resetForm();
     $("ev-startdate").value = currentDay;
     $("ev-enddate").value = currentDay;
