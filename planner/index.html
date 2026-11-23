@@ -1364,6 +1364,9 @@ html[data-device="iphone"]:not(.embedded) .panel-menu > button[aria-pressed="tru
 :root[data-tema="rose"] { color-scheme: dark; --accent:#fb7185; --accent-hover:#f43f5e; --accent-soft: rgba(251,113,133,.16); --glass: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03)); --line: rgba(255,255,255,.13); --soft-blue: rgba(251,113,133,.10); --soft-pink: rgba(244,114,182,.14); --soft-yellow: rgba(253,164,175,.10); --soft-red: rgba(244,63,94,.12); }
 :root[data-tema="rose"] body { background: radial-gradient(860px 560px at 86% 112%, rgba(253,164,175,.45), transparent 64%), radial-gradient(700px 480px at -6% -10%, rgba(190,24,93,.38), transparent 62%), linear-gradient(180deg, #2b0d1f 0%, #5a1c3c 60%, #3b1030 100%); }
 :root[data-tema="rose"] .card, :root[data-tema="rose"] .top { backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%); }
+
+/* Janelas acima da barra inferior */
+.modal { z-index: 60; }
 </style>
 
 <main>
@@ -1398,7 +1401,7 @@ html[data-device="iphone"]:not(.embedded) .panel-menu > button[aria-pressed="tru
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-23-1625</span>
+      <span class="status" title="versão desta página">v.2026-11-23-2010</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
