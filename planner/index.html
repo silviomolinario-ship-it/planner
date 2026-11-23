@@ -1291,7 +1291,7 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-23-1415</span>
+      <span class="status" title="versão desta página">v.2026-11-23-1420</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -4013,7 +4013,7 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
           it.addEventListener("pointerdown", (e) => wkPointerDown(e, ev, day, it));
           it.addEventListener("click", () => {
             if (wkJustDragged) { wkJustDragged = false; return; }
-            goToDay(day);
+            startEdit(ev);
           });
           col.append(it);
         });
