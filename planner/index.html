@@ -1204,6 +1204,9 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
 .wk-item { font: inherit; font-size: 12px; line-height: 1.3; text-align: left; color: inherit; padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.06); border: 0; border-left: 3px solid var(--cat, #7dd3fc); cursor: pointer; overflow-wrap: anywhere; min-width: 0; }
 .wk-item .tm { display: block; color: var(--muted); font-size: 11px; }
 .wk-item.done { opacity: .55; text-decoration: line-through; }
+.wk-item { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.wk-item.wk-src { opacity: .35; }
+.wk-col.over { outline: 2px dashed var(--accent); outline-offset: -2px; }
 .month-grid { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 6px; margin-top: 10px; }
 .mo-wd { font-size: 11px; font-weight: 700; color: var(--muted); text-align: center; padding: 4px 0; }
 .mo-cell { display: grid; align-content: start; gap: 3px; min-height: 96px; min-width: 0; padding: 6px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line); color: inherit; font: inherit; text-align: left; cursor: pointer; overflow: hidden; }
@@ -1288,7 +1291,7 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-22-1430</span>
+      <span class="status" title="versão desta página">v.2026-11-23-1415</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -3842,6 +3845,124 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
       if (t) t.click();
     });
   }
+  // ---------- Arrastar tarefa entre dias na visão semanal ----------
+  let wkDrag = null, wkJustDragged = false;
+  function shiftDay(day, n) {
+    const d = new Date(day + "T12:00:00");
+    d.setDate(d.getDate() + n);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function daysBetween(a, b) { return Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 86400000); }
+  function wkPointerDown(e, ev, day, item) {
+    if (e.button > 0 || wkDrag) return;
+    wkJustDragged = false;
+    wkDrag = { ev: ev, from: day, item: item, id: e.pointerId, x: e.clientX, y: e.clientY, active: false, over: null, ghost: null };
+    item.setPointerCapture(e.pointerId);
+    item.addEventListener("pointermove", wkPointerMove);
+    item.addEventListener("pointerup", wkPointerUp);
+    item.addEventListener("pointercancel", wkPointerCancel);
+  }
+  function wkPointerMove(e) {
+    const d = wkDrag;
+    if (!d || e.pointerId !== d.id) return;
+    if (!d.active) {
+      if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) < 8) return;
+      d.active = true;
+      const g = d.item.cloneNode(true);
+      g.classList.add("kb-ghost");
+      g.style.width = d.item.offsetWidth + "px";
+      document.body.append(g);
+      d.ghost = g;
+      d.item.classList.add("wk-src");
+    }
+    d.ghost.style.transform = "translate(" + (e.clientX - d.ghost.offsetWidth / 2) + "px," + (e.clientY - 20) + "px)";
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const col = under ? under.closest(".wk-col") : null;
+    const day = col ? col.dataset.day : null;
+    if (day !== d.over) {
+      document.querySelectorAll(".wk-col.over").forEach((c) => c.classList.remove("over"));
+      if (col) col.classList.add("over");
+      d.over = day;
+    }
+  }
+  function wkEnd() {
+    const d = wkDrag;
+    wkDrag = null;
+    d.item.removeEventListener("pointermove", wkPointerMove);
+    d.item.removeEventListener("pointerup", wkPointerUp);
+    d.item.removeEventListener("pointercancel", wkPointerCancel);
+    if (d.ghost) d.ghost.remove();
+    d.item.classList.remove("wk-src");
+    document.querySelectorAll(".wk-col.over").forEach((c) => c.classList.remove("over"));
+    return d;
+  }
+  function wkPointerUp(e) {
+    const d = wkDrag;
+    if (!d || e.pointerId !== d.id) return;
+    wkEnd();
+    if (!d.active) return; // toque simples: segue o clique normal
+    wkJustDragged = true;
+    if (d.over && d.over !== d.from) moveEventToDay(d.ev, d.from, d.over);
+    else renderPeriod("semana");
+  }
+  function wkPointerCancel(e) {
+    const d = wkDrag;
+    if (!d || e.pointerId !== d.id) return;
+    const was = wkEnd();
+    if (was.active) renderPeriod("semana");
+  }
+  // Altera um dia de planner_days (o atual fica em memória e é salvo pelo fluxo normal)
+  async function patchDayData(day, mutate) {
+    if (day === currentDay) {
+      const dd = { movedOut: Object.assign({}, movedOut), movedIn: Object.assign({}, movedIn) };
+      mutate(dd);
+      movedOut = dd.movedOut;
+      movedIn = dd.movedIn;
+      scheduleSave();
+      return;
+    }
+    const { data: userData } = await sb.auth.getUser();
+    if (!userData || !userData.user) throw new Error("sem sessão");
+    const { data: row, error: readErr } = await sb.from("planner_days").select("data").eq("day", day).maybeSingle();
+    if (readErr) throw readErr;
+    const dd = Object.assign(emptyData(), (row && row.data) || {});
+    mutate(dd);
+    const { error: upErr } = await sb.from("planner_days").upsert(
+      { user_id: userData.user.id, day: day, data: dd, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,day" }
+    );
+    if (upErr) throw upErr;
+    writeCache(day, dd);
+  }
+  async function moveEventToDay(ev, from, to) {
+    const recurring = !!ev.repeat_rule && ev.repeat_rule !== "none";
+    const label = to.split("-").reverse().join("/");
+    try {
+      if (!recurring) {
+        const delta = daysBetween(from, to);
+        const patch = { starts_on: shiftDay(ev.starts_on, delta) };
+        if (ev.ends_on) patch.ends_on = shiftDay(ev.ends_on, delta);
+        await updateEventFields(ev, patch);
+        setStatus("Tarefa movida para " + label);
+        return;
+      }
+      // Recorrente: só esta ocorrência sai do dia de origem e aparece no novo dia
+      await patchDayData(from, (dd) => {
+        dd.movedOut = Object.assign({}, dd.movedOut || {}, { [ev.id]: true });
+        if (dd.movedIn) delete dd.movedIn[ev.id];
+      });
+      await patchDayData(to, (dd) => {
+        dd.movedIn = Object.assign({}, dd.movedIn || {}, { [ev.id]: true });
+        if (dd.movedOut) delete dd.movedOut[ev.id];
+      });
+      renderEvents();
+      setStatus("Ocorrência movida para " + label);
+    } catch (e) {
+      setStatus("Não foi possível mover: " + (e && e.message ? e.message : "erro de conexão"));
+      await loadEvents();
+    }
+  }
+
   function renderPeriod(kind) {
     if (!openPanels.includes(kind) || !periodCursor) return;
     const days = periodDaysOf(kind);
@@ -3864,6 +3985,7 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
       days.forEach((day, i) => {
         const col = document.createElement("div");
         col.className = "wk-col" + (day === todayStr() ? " today" : "");
+        col.dataset.day = day;
         const head = document.createElement("button");
         head.type = "button";
         head.className = "wk-head";
@@ -3888,7 +4010,11 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
           tm.className = "tm";
           tm.textContent = ev.start_time.slice(0, 5) + (isD ? " ✓" : "");
           it.append(tm, document.createTextNode(ev.title));
-          it.addEventListener("click", () => goToDay(day));
+          it.addEventListener("pointerdown", (e) => wkPointerDown(e, ev, day, it));
+          it.addEventListener("click", () => {
+            if (wkJustDragged) { wkJustDragged = false; return; }
+            goToDay(day);
+          });
           col.append(it);
         });
         body.append(col);
