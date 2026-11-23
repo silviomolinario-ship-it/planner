@@ -1315,6 +1315,29 @@ html[data-device="iphone"]:not(.embedded) #app, html[data-device="ipad"]:not(.em
 html[data-device="iphone"]:not(.embedded) #dash-screen, html[data-device="ipad"]:not(.embedded) #dash-screen, html[data-device="mac"]:not(.embedded) #dash-screen,
 html[data-device="iphone"]:not(.embedded) #cats-screen, html[data-device="ipad"]:not(.embedded) #cats-screen, html[data-device="mac"]:not(.embedded) #cats-screen { padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important; }
 html[data-device="mac"]:not(.embedded) #app { margin-left: 0 !important; }
+
+/* =====================================================================
+   BARRA FLUTUANTE DE VIDRO (iPhone, iPad, Mac): cápsula centralizada no pé da tela
+   ===================================================================== */
+html[data-device="iphone"]:not(.embedded) .panel-menu.panel-menu, html[data-device="ipad"]:not(.embedded) .panel-menu.panel-menu, html[data-device="mac"]:not(.embedded) .panel-menu.panel-menu {
+  position: fixed !important; top: auto !important; left: 50% !important; right: auto !important; bottom: calc(12px + env(safe-area-inset-bottom)) !important;
+  transform: translateX(-50%) !important; width: max-content !important; max-width: calc(100vw - 24px) !important;
+  height: auto !important; padding: 7px 10px !important; gap: 4px !important;
+  justify-content: safe center !important; border-radius: 999px !important;
+  background: rgba(255,255,255,.12) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important; -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255,255,255,.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 14px 34px rgba(0,0,0,.28) !important;
+}
+html[data-device="iphone"]:not(.embedded) .panel-menu > button, html[data-device="iphone"]:not(.embedded) .panel-menu > a.menu-link, html[data-device="ipad"]:not(.embedded) .panel-menu > button, html[data-device="ipad"]:not(.embedded) .panel-menu > a.menu-link, html[data-device="mac"]:not(.embedded) .panel-menu > button, html[data-device="mac"]:not(.embedded) .panel-menu > a.menu-link {
+  width: 42px !important; min-width: 42px !important; height: 42px !important; min-height: 42px !important;
+  border-radius: 50% !important; color: rgba(255,255,255,.72) !important; background: transparent !important;
+}
+html[data-device="iphone"]:not(.embedded) .panel-menu > button[aria-pressed="true"], html[data-device="ipad"]:not(.embedded) .panel-menu > button[aria-pressed="true"], html[data-device="mac"]:not(.embedded) .panel-menu > button[aria-pressed="true"] {
+  background: rgba(255,255,255,.24) !important; color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 0 0 1px rgba(255,255,255,.16) !important;
+}
+html[data-device="iphone"]:not(.embedded) .panel-menu > button[aria-pressed="true"] .ico, html[data-device="ipad"]:not(.embedded) .panel-menu > button[aria-pressed="true"] .ico, html[data-device="mac"]:not(.embedded) .panel-menu > button[aria-pressed="true"] .ico { stroke: #fff !important; }
 </style>
 
 <main>
@@ -1349,7 +1372,7 @@ html[data-device="mac"]:not(.embedded) #app { margin-left: 0 !important; }
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-23-1515</span>
+      <span class="status" title="versão desta página">v.2026-11-23-1610</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
