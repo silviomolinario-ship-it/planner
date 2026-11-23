@@ -1338,6 +1338,32 @@ html[data-device="iphone"]:not(.embedded) .panel-menu > button[aria-pressed="tru
   box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 0 0 1px rgba(255,255,255,.16) !important;
 }
 html[data-device="iphone"]:not(.embedded) .panel-menu > button[aria-pressed="true"] .ico, html[data-device="ipad"]:not(.embedded) .panel-menu > button[aria-pressed="true"] .ico, html[data-device="mac"]:not(.embedded) .panel-menu > button[aria-pressed="true"] .ico { stroke: #fff !important; }
+
+/* ---------- Temas inspirados em pesquisa de Liquid Glass para dashboards ----------
+   Cristal neon: vidro muito translúcido, brilho neon e fundo escuro (dashboards de trading)
+   Vidro fosco: superfícies opacas e texto de alto contraste (legibilidade sobre vidro)
+   Maré profunda: camadas com profundidade e brilho suave (estilo visionOS)
+   Tinta rosé: vidro tingido pelo conteúdo, com destaque quente */
+:root[data-tema="cristal"] { color-scheme: dark; --accent:#22d3ee; --accent-hover:#06b6d4; --accent-soft: rgba(34,211,238,.16); --glass: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.035)); --line: rgba(255,255,255,.14); --soft-blue: rgba(34,211,238,.12); --soft-pink: rgba(56,189,248,.08); --soft-yellow: rgba(45,212,191,.10); --soft-red: rgba(244,63,94,.10); }
+:root[data-tema="cristal"] body { background: radial-gradient(760px 520px at 92% 108%, rgba(34,211,238,.42), transparent 64%), radial-gradient(640px 460px at -4% -8%, rgba(56,189,248,.28), transparent 62%), linear-gradient(180deg, #041a24 0%, #072c40 60%, #0a2233 100%); }
+:root[data-tema="cristal"] .card, :root[data-tema="cristal"] .top { backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 10px 30px rgba(0,0,0,.25); }
+
+:root[data-tema="fosco"] { color-scheme: light; --ink:#0f172a; --muted:#334155; --accent:#1d4ed8; --accent-hover:#1e40af; --accent-soft: rgba(29,78,216,.12); --line: rgba(15,23,42,.16); --glass: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,255,.96)); --shadow-sm: 0 2px 8px rgba(15,23,42,.10); --shadow: 0 10px 24px rgba(15,23,42,.14); --soft-blue: rgba(29,78,216,.08); --soft-pink: rgba(190,24,93,.06); --soft-yellow: rgba(180,83,9,.08); --soft-red: rgba(185,28,28,.07); }
+:root[data-tema="fosco"] body { background: linear-gradient(180deg, #e9eef8 0%, #f3f5fb 100%); }
+:root[data-tema="fosco"] .top { background: #fff; backdrop-filter: none; -webkit-backdrop-filter: none; }
+:root[data-tema="fosco"] .top * { color: var(--ink); }
+:root[data-tema="fosco"] .panel-menu::before { color: var(--ink) !important; }
+:root[data-tema="fosco"] .top .muted, :root[data-tema="fosco"] #device-info, :root[data-tema="fosco"] #sync-status { color: var(--muted); }
+:root[data-tema="fosco"] .panel-menu button[aria-pressed="true"], :root[data-tema="fosco"] .panel-menu button[aria-pressed="true"] * { color: #fff; }
+:root[data-tema="fosco"] .modal-box { background: #fff; }
+
+:root[data-tema="mare"] { color-scheme: dark; --accent:#2dd4bf; --accent-hover:#14b8a6; --accent-soft: rgba(45,212,191,.16); --glass: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.025)); --line: rgba(255,255,255,.12); --soft-blue: rgba(45,212,191,.10); --soft-pink: rgba(99,102,241,.12); --soft-yellow: rgba(94,234,212,.08); --soft-red: rgba(248,113,113,.08); }
+:root[data-tema="mare"] body { background: radial-gradient(900px 600px at 10% 112%, rgba(20,184,166,.40), transparent 66%), radial-gradient(760px 520px at 96% -10%, rgba(79,70,229,.35), transparent 62%), linear-gradient(180deg, #031c2b 0%, #0b2f3d 55%, #14213d 100%); }
+:root[data-tema="mare"] .card { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 18px 40px rgba(0,0,0,.30); }
+
+:root[data-tema="rose"] { color-scheme: dark; --accent:#fb7185; --accent-hover:#f43f5e; --accent-soft: rgba(251,113,133,.16); --glass: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03)); --line: rgba(255,255,255,.13); --soft-blue: rgba(251,113,133,.10); --soft-pink: rgba(244,114,182,.14); --soft-yellow: rgba(253,164,175,.10); --soft-red: rgba(244,63,94,.12); }
+:root[data-tema="rose"] body { background: radial-gradient(860px 560px at 86% 112%, rgba(253,164,175,.45), transparent 64%), radial-gradient(700px 480px at -6% -10%, rgba(190,24,93,.38), transparent 62%), linear-gradient(180deg, #2b0d1f 0%, #5a1c3c 60%, #3b1030 100%); }
+:root[data-tema="rose"] .card, :root[data-tema="rose"] .top { backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%); }
 </style>
 
 <main>
@@ -1372,7 +1398,7 @@ html[data-device="iphone"]:not(.embedded) .panel-menu > button[aria-pressed="tru
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-23-1610</span>
+      <span class="status" title="versão desta página">v.2026-11-23-1625</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -3427,6 +3453,10 @@ html[data-device="iphone"]:not(.embedded) .panel-menu > button[aria-pressed="tru
     ["aurora", "Aurora", "linear-gradient(135deg,#053b35,#3b1d6e)"],
     ["grafite", "Grafite", "linear-gradient(135deg,#0e0f12,#4a4e58)"],
     ["poente", "Pôr do sol", "linear-gradient(135deg,#2a0f2e,#c2410c 70%,#f472b6)"],
+    ["cristal", "Cristal neon", "linear-gradient(135deg,#041a24,#0e3b5c 60%,#22d3ee)"],
+    ["fosco", "Vidro fosco", "linear-gradient(135deg,#f8fafc,#dbe4f5)"],
+    ["mare", "Maré profunda", "linear-gradient(135deg,#031c2b,#0f4c5c 55%,#2dd4bf)"],
+    ["rose", "Tinta rosé", "linear-gradient(135deg,#2b0d1f,#7e2a4f 60%,#fda4af)"],
   ];
   function renderThemeGrid() {
     const g = $("theme-grid");
