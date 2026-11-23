@@ -1204,7 +1204,9 @@ html[data-device="ipad"] .kb-actions .kb-btn { width: 22px; height: 22px; min-he
 .wk-item { font: inherit; font-size: 12px; line-height: 1.3; text-align: left; color: inherit; padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.06); border: 0; border-left: 3px solid var(--cat, #7dd3fc); cursor: pointer; overflow-wrap: anywhere; min-width: 0; }
 .wk-item .tm { display: block; color: var(--muted); font-size: 11px; }
 .wk-item.done { opacity: .55; text-decoration: line-through; }
-.wk-item { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.wk-item { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; display: flex; gap: 6px; align-items: flex-start; }
+.wk-item .wk-body { min-width: 0; flex: 1; }
+.wk-item .wk-check { flex: 0 0 auto; width: 16px; height: 16px; margin: 1px 0 0; accent-color: var(--accent); cursor: pointer; }
 .wk-item.wk-src { opacity: .35; }
 .wk-col.over { outline: 2px dashed var(--accent); outline-offset: -2px; }
 .month-grid { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 6px; margin-top: 10px; }
@@ -1291,7 +1293,7 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-23-1420</span>
+      <span class="status" title="versão desta página">v.2026-11-23-1425</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -3933,6 +3935,7 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
     );
     if (upErr) throw upErr;
     writeCache(day, dd);
+    periodCache[day] = dd;
   }
   async function moveEventToDay(ev, from, to) {
     const recurring = !!ev.repeat_rule && ev.repeat_rule !== "none";
@@ -3961,6 +3964,21 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
       setStatus("Não foi possível mover: " + (e && e.message ? e.message : "erro de conexão"));
       await loadEvents();
     }
+  }
+
+  async function setDoneOnDay(day, ev, checked) {
+    if (day === currentDay) { toggleDone(ev, checked); return; }
+    try {
+      await patchDayData(day, (dd) => {
+        dd.doneEvents = Object.assign({}, dd.doneEvents || {});
+        if (checked) dd.doneEvents[ev.id] = true; else delete dd.doneEvents[ev.id];
+      });
+      syncParentSub(ev.id, !!checked);
+      setStatus(checked ? "Tarefa concluída" : "Conclusão desfeita");
+    } catch (e) {
+      setStatus("Não foi possível salvar: " + (e && e.message ? e.message : "erro de conexão"));
+    }
+    renderPeriod("semana");
   }
 
   function renderPeriod(kind) {
@@ -4000,16 +4018,27 @@ html[data-device="ipad"] .kb-mvrow .kb-move { width: auto; }
           col.append(e);
         }
         list.forEach((ev) => {
-          const it = document.createElement("button");
-          it.type = "button";
+          const it = document.createElement("div");
+          it.tabIndex = 0;
+          it.setAttribute("role", "button");
           const isD = isDoneOnDay(day, ev);
           it.className = "wk-item" + (isD ? " done" : "");
           const cat = catById(ev.category_id);
           it.style.setProperty("--cat", cat ? cat.color : "#7dd3fc");
+          const chk = document.createElement("input");
+          chk.type = "checkbox";
+          chk.className = "wk-check";
+          chk.checked = isD;
+          chk.setAttribute("aria-label", "Concluir " + ev.title);
+          chk.addEventListener("pointerdown", (e) => e.stopPropagation());
+          chk.addEventListener("click", (e) => { e.stopPropagation(); setDoneOnDay(day, ev, chk.checked); });
+          const wbody = document.createElement("span");
+          wbody.className = "wk-body";
           const tm = document.createElement("span");
           tm.className = "tm";
-          tm.textContent = ev.start_time.slice(0, 5) + (isD ? " ✓" : "");
-          it.append(tm, document.createTextNode(ev.title));
+          tm.textContent = ev.start_time.slice(0, 5);
+          wbody.append(tm, document.createTextNode(ev.title));
+          it.append(chk, wbody);
           it.addEventListener("pointerdown", (e) => wkPointerDown(e, ev, day, it));
           it.addEventListener("click", () => {
             if (wkJustDragged) { wkJustDragged = false; return; }
