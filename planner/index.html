@@ -1401,7 +1401,7 @@ html[data-device="iphone"]:not(.embedded) .panel-menu > button[aria-pressed="tru
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-23-2010</span>
+      <span class="status" title="versão desta página">v.2026-11-26-1130</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -2064,7 +2064,12 @@ html[data-device="iphone"]:not(.embedded) .panel-menu > button[aria-pressed="tru
     mv.title = "Migrar para outro dia";
     mv.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M9 16h5M12 13.5l2.5 2.5L12 18.5"/></svg>';
     mv.addEventListener("click", () => openMover(ev));
-    bar.append(edit, mv);
+    const dup = document.createElement("button");
+    dup.type = "button";
+    dup.className = "ghost";
+    dup.textContent = "Replicar";
+    dup.addEventListener("click", () => duplicateEvent(ev));
+    bar.append(edit, dup, mv);
     text.append(bar);
     row.append(cb, text, del);
     return row;
@@ -2477,6 +2482,16 @@ html[data-device="iphone"]:not(.embedded) .panel-menu > button[aria-pressed="tru
     $("ev-submit").textContent = "Salvar alterações";
     $("ev-cancel").hidden = false;
     openModal("modal-tarefa", "Editar tarefa");
+  }
+  // Replicar: abre o formulário com os dados da tarefa como uma tarefa nova (nada é alterado até salvar)
+  function duplicateEvent(ev) {
+    startEdit(ev);
+    editingId = null;
+    $("sub-list").querySelectorAll(".sub-row").forEach((r) => { r.dataset.child = ""; r.dataset.done = ""; });
+    $("ev-title").value = ev.title + " (cópia)";
+    $("ev-fup").checked = false;
+    $("ev-submit").textContent = "Adicionar tarefa";
+    openModal("modal-tarefa", "Replicar tarefa");
   }
   function resetForm() {
     editingId = null;
@@ -4342,7 +4357,14 @@ html[data-device="iphone"]:not(.embedded) .panel-menu > button[aria-pressed="tru
     del.title = "Excluir tarefa";
     del.setAttribute("aria-label", "Excluir tarefa");
     del.addEventListener("click", () => kbDelete(ev));
-    mvRow.append(mv, del);
+    const dup = document.createElement("button");
+    dup.type = "button";
+    dup.className = "kb-btn";
+    dup.textContent = "⧉";
+    dup.title = "Replicar tarefa";
+    dup.setAttribute("aria-label", "Replicar tarefa");
+    dup.addEventListener("click", () => duplicateEvent(ev));
+    mvRow.append(mv, dup, del);
     card.append(grip, title, meta, subInfo, bar, foot, actions, mvRow);
     return card;
   }
