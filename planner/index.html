@@ -1394,6 +1394,8 @@ html[data-device="iphone"]:not(.embedded) .panel-menu > button[aria-pressed="tru
 .kb-head { margin-bottom: 8px; }
 .kb-head h2 { font-size: 17px; }
 html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[data-device="mac"] .kb-board { margin-bottom: 96px; }
+.kb-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kb-head-actions select { min-height: 40px; padding: 6px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; background: rgba(255,255,255,.08); color: inherit; border: 1px solid rgba(255,255,255,.18); }
 </style>
 
 <main>
@@ -1428,7 +1430,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-26-1155</span>
+      <span class="status" title="versão desta página">v.2026-11-26-1200</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -1528,7 +1530,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
           <div id="per-body-mes" class="month-grid"></div>
         </section>
         <section class="card kanban-card" data-panel="kanban" hidden>
-          <div class="kb-head"><h2>Kanban do dia</h2><button id="kb-new" class="primary" type="button">+ Nova tarefa</button></div>
+          <div class="kb-head"><h2>Kanban do dia</h2><div class="kb-head-actions"><select id="kb-sort" aria-label="Ordenar cards dentro das colunas"><option value="manual">Ordem manual</option><option value="horario">Por horário</option><option value="prioridade">Por prioridade</option><option value="titulo">Por título</option></select><button id="kb-new" class="primary" type="button">+ Nova tarefa</button></div></div>
           <div id="kb-kpis" class="kb-kpis"></div>
           <div id="kb-board" class="kb-board"></div>
         </section>
@@ -4475,7 +4477,16 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
     d.card.classList.remove("kb-src");
     document.querySelectorAll(".kb-col.over").forEach((c) => c.classList.remove("over"));
     if (e.type === "pointerup" && d.over && d.over !== kbColumnOf(d.ev)) kbMove(d.ev, d.over);
-    else renderKanban();
+    else if (e.type === "pointerup" && d.over) {
+      const colEl = document.querySelector('.kb-col[data-key="' + d.over + '"]');
+      const cards = colEl ? [...colEl.querySelectorAll(".kb-card")].filter((c) => c !== d.card) : [];
+      let idx = cards.length;
+      for (let i = 0; i < cards.length; i++) {
+        const r = cards[i].getBoundingClientRect();
+        if (e.clientY < r.top + r.height / 2) { idx = i; break; }
+      }
+      kbReorder(d.ev, d.over, idx);
+    } else renderKanban();
   }
   function kbMove(ev, to) {
     const id = ev.id;
@@ -4515,6 +4526,41 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
     if (Object.keys(patch).length) updateEventFields(ev, patch); else renderEvents();
   }
 
+  // Ordem dos cards dentro de cada coluna: manual (guardada em timers[id].ord) ou automática
+  const KB_PRIO_RANK = { urgente: 0, importante: 1, normal: 2 };
+  function kbSortCards(arr) {
+    const mode = localStorage.getItem("planner-kb-sort") || "manual";
+    const byHour = (a, b) => a.start_time.localeCompare(b.start_time);
+    const byManual = (a, b) => ((timers[a.id] || {}).ord ?? 1e9) - ((timers[b.id] || {}).ord ?? 1e9) || byHour(a, b);
+    const prio = (ev) => ev.is_priority ? (KB_PRIO_RANK[ev.priority_level] ?? 2) : 3;
+    const cmp = {
+      manual: byManual,
+      horario: byHour,
+      prioridade: (a, b) => prio(a) - prio(b) || byHour(a, b),
+      titulo: (a, b) => a.title.localeCompare(b.title, "pt-BR"),
+    }[mode] || byManual;
+    return arr.slice().sort(cmp);
+  }
+  // Grava a nova posição do card dentro da coluna (idx = posição final)
+  function kbReorder(ev, key, idx) {
+    const col = kbSortCards(kbColumnCards(key)).filter((x) => x.id !== ev.id);
+    col.splice(Math.max(0, Math.min(idx, col.length)), 0, ev);
+    col.forEach((x, i) => {
+      const t = timers[x.id] || (timers[x.id] = { total: 0, runningSince: null, finished: false });
+      t.ord = i;
+    });
+    localStorage.setItem("planner-kb-sort", "manual");
+    const sel = $("kb-sort");
+    if (sel) sel.value = "manual";
+    scheduleSave();
+    renderKanban();
+  }
+  function kbColumnCards(key) {
+    return events
+      .filter((ev) => (occurs(ev, currentDay) && !movedOut[ev.id]) || !!movedIn[ev.id])
+      .filter((ev) => kbColumnOf(ev) === key);
+  }
+
   function renderKanban() {
     if (kbDrag) return;
     const board = $("kb-board"), kpis = $("kb-kpis");
@@ -4525,6 +4571,9 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
     const cols = { todo: [], doing: [], priority: [], reunioes: [], fup: [], done: [], canceladas: [] };
     let spentAll = 0;
     list.forEach((ev) => { cols[kbColumnOf(ev)].push(ev); spentAll += timerMs(ev.id); });
+    Object.keys(cols).forEach((k) => { cols[k] = kbSortCards(cols[k]); });
+    const sortSel = $("kb-sort");
+    if (sortSel) sortSel.value = localStorage.getItem("planner-kb-sort") || "manual";
     const total = list.length - cols.canceladas.length, done = cols.done.length;
     const pctDone = total ? Math.round(done / total * 100) : 0;
     kpis.textContent = "";
@@ -4581,6 +4630,10 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
       board.append(col);
     });
   }
+  $("kb-sort").addEventListener("change", (e) => {
+    localStorage.setItem("planner-kb-sort", e.target.value);
+    renderKanban();
+  });
   $("kb-new").addEventListener("click", () => {
     resetForm();
     $("ev-startdate").value = currentDay;
