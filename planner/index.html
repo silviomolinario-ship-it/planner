@@ -1396,8 +1396,6 @@ html[data-device="iphone"]:not(.embedded) .panel-menu > button[aria-pressed="tru
 html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[data-device="mac"] .kb-board { margin-bottom: 96px; }
 .kb-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .kb-head-actions select { min-height: 40px; padding: 6px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; background: rgba(255,255,255,.08); color: inherit; border: 1px solid rgba(255,255,255,.18); }
-.ev-error { margin: 0; padding: 8px 10px; border-radius: 10px; font-size: 13px; font-weight: 600; color: #fecaca; background: rgba(239,68,68,.18); border: 1px solid rgba(248,113,113,.45); }
-.ev-error[hidden] { display: none; }
 </style>
 
 <main>
@@ -1432,7 +1430,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-27-1410</span>
+      <span class="status" title="versão desta página">v.2026-11-27-1125</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -1606,7 +1604,6 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
               <input id="ev-start" type="time" aria-label="Início" required>
               <input id="ev-end" type="time" aria-label="Fim">
             </div>
-            <p id="ev-error" class="ev-error" role="alert" hidden></p>
             <select id="ev-repeat" aria-label="Repetir">
               <option value="none">Não repete</option>
               <option value="daily">Todos os dias</option>
@@ -2565,16 +2562,8 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
     return { count: days.length, truncated: truncated, first: days[0] };
   }
 
-  function formError(msg) {
-    const box = $("ev-error");
-    if (!box) { setStatus(msg); return; }
-    box.textContent = msg || "";
-    box.hidden = !msg;
-  }
-
   async function addEvent(e) {
     e.preventDefault();
-    formError("");
     const title = $("ev-title").value.trim();
     const start = $("ev-start").value;
     const end = $("ev-end").value;
@@ -2585,11 +2574,11 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
     const fupChk = $("ev-fup").checked;
     const startDate = $("ev-startdate").value || todayStr();
     const endDate = $("ev-enddate").value || null;
-    if (endDate && endDate < startDate) { formError("A data de fim é anterior à de início"); return; }
+    if (endDate && endDate < startDate) { setStatus("A data de fim é anterior à de início"); return; }
     if (!title || !start) return;
     const subs = collectSubs();
     const badSub = subs.find((x) => (x.starts_on && x.ends_on && x.ends_on < x.starts_on) || (x.starts_on && x.starts_on === x.ends_on && x.start_time && x.end_time && x.end_time < x.start_time));
-    if (badSub) { formError("Revise data ou horário da subtarefa: " + badSub.title); return; }
+    if (badSub) { setStatus("Revise data ou horário da subtarefa: " + badSub.title); return; }
     try {
       const { data: userData } = await sb.auth.getUser();
       if (!userData || !userData.user) throw new Error("sem sessão");
@@ -2613,7 +2602,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
 
       if (!editingId && repeat !== "none") {
         if (endDate === startDate) {
-          formError("Defina a data final da repetição: está igual à data inicial.");
+          setStatus("Defina a data final da repetição (está igual à data inicial)");
           $("ev-enddate").focus();
           return;
         }
@@ -2665,7 +2654,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
       setStatus("Tarefa salva");
       closeModal("modal-tarefa");
     } catch (err) {
-      formError("Não foi possível salvar: " + (err && err.message ? err.message : "erro de conexão"));
+      setStatus("Não foi possível salvar o compromisso" + (err && err.message ? ": " + err.message : ""));
     }
   }
 
