@@ -2476,11 +2476,24 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
   }
   $("move-save").addEventListener("click", saveMover);
 
+  // O Supabase devolve no máximo 1000 linhas por consulta: lê em páginas até trazer tudo
+  async function fetchAllEvents() {
+    const PAGE = 1000;
+    let all = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await sb.from("planner_events").select("*")
+        .order("start_time", { ascending: true }).order("id", { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      all = all.concat(data || []);
+      if (!data || data.length < PAGE) break;
+    }
+    return all;
+  }
+
   async function loadEvents() {
     try {
-      const { data, error } = await sb.from("planner_events").select("*").order("start_time", { ascending: true });
-      if (error) throw error;
-      events = data || [];
+      events = await fetchAllEvents();
     } catch (e) {
       setStatus("Sem conexão: compromissos podem estar desatualizados");
     }
@@ -2937,7 +2950,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
   async function loadBacklog() {
     const [bl, ev, days] = await Promise.all([
       sb.from("planner_backlog").select("*"),
-      sb.from("planner_events").select("*"),
+      fetchAllEvents().then(data => ({ data, error: null }), error => ({ data: null, error })),
       sb.from("planner_days").select("day,data")
     ]);
     if (bl.error) {
@@ -3233,7 +3246,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
   $("bk-link-open").addEventListener("click", async () => {
     setStatus("Vinculando tarefas…");
     const [ev, days, bl] = await Promise.all([
-      sb.from("planner_events").select("*"),
+      fetchAllEvents().then(data => ({ data, error: null }), error => ({ data: null, error })),
       sb.from("planner_days").select("day,data"),
       sb.from("planner_backlog").select("source_event_id")
     ]);
