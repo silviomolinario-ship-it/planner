@@ -1432,7 +1432,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-27-1410</span>
+      <span class="status" title="versão desta página">v.2026-11-27-1430</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -2024,7 +2024,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
         setTimeout(() => { delete del.dataset.armed; del.textContent = "Excluir série"; }, 4000);
         return;
       }
-      deleteEvent(ev);
+      deleteWithSeries(ev);
     });
 
     if (ev.project_id) {
@@ -2567,8 +2567,8 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
     if (!days.length) throw new Error("nenhum dia cai nessa regra");
     const rows = days.map((day) => Object.assign({}, fields, { repeat_rule: "none", starts_on: day, ends_on: day }));
     const ids = [];
-    for (let i = 0; i < rows.length; i += 100) {
-      const { data, error } = await sb.from("planner_events").insert(rows.slice(i, i + 100)).select("id");
+    for (let i = 0; i < rows.length; i += 1000) {
+      const { data, error } = await sb.from("planner_events").insert(rows.slice(i, i + 1000)).select("id");
       if (error) throw error;
       (data || []).forEach((r) => ids.push(r.id));
     }
@@ -2603,6 +2603,9 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
     const subs = collectSubs();
     const badSub = subs.find((x) => (x.starts_on && x.ends_on && x.ends_on < x.starts_on) || (x.starts_on && x.starts_on === x.ends_on && x.start_time && x.end_time && x.end_time < x.start_time));
     if (badSub) { formError("Revise data ou horário da subtarefa: " + badSub.title); return; }
+    if (addEvent.busy) return;
+    addEvent.busy = true;
+    $("ev-submit").disabled = true;
     try {
       const { data: userData } = await sb.auth.getUser();
       if (!userData || !userData.user) throw new Error("sem sessão");
@@ -2679,6 +2682,9 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
       closeModal("modal-tarefa");
     } catch (err) {
       formError("Não foi possível salvar: " + (err && err.message ? err.message : "erro de conexão"));
+    } finally {
+      addEvent.busy = false;
+      $("ev-submit").disabled = false;
     }
   }
 
@@ -4458,7 +4464,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
     del.textContent = "🗑";
     del.title = "Excluir tarefa";
     del.setAttribute("aria-label", "Excluir tarefa");
-    del.addEventListener("click", () => kbDelete(ev));
+    del.addEventListener("click", () => deleteWithSeries(ev));
     const dup = document.createElement("button");
     dup.type = "button";
     dup.className = "kb-btn";
@@ -4482,6 +4488,34 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
       if (error) throw error;
     }
     await loadEvents();
+  }
+  // Tarefas criadas juntas por uma repetição têm o mesmo created_at e os mesmos dados
+  function seriesOf(ev) {
+    if (!ev.created_at) return [ev];
+    const same = (a, b) => (a || null) === (b || null);
+    const group = events.filter((x) =>
+      x.created_at === ev.created_at && x.title === ev.title && x.start_time === ev.start_time &&
+      same(x.end_time, ev.end_time) && same(x.category_id, ev.category_id) &&
+      same(x.subcategory_id, ev.subcategory_id) && x.kind === ev.kind && same(x.project_id, ev.project_id) &&
+      (x.repeat_rule || "none") === "none"
+    );
+    return group.length > 1 ? group : [ev];
+  }
+  async function deleteWithSeries(ev) {
+    if (!window.confirm('Excluir "' + ev.title + '"?')) return;
+    let list = [ev];
+    const group = seriesOf(ev);
+    if (group.length > 1) {
+      const all = window.confirm("Esta tarefa faz parte de uma série de " + group.length + " dias.\n\nOK = excluir todas as " + group.length + " tarefas da série.\nCancelar = excluir só esta.");
+      if (all) list = group;
+    }
+    try {
+      await removeEventRows(list);
+      setStatus(list.length > 1 ? list.length + " tarefas excluídas" : "Tarefa excluída");
+    } catch (err) {
+      setStatus("Não foi possível excluir: " + (err && err.message ? err.message : "erro de conexão"));
+      await loadEvents();
+    }
   }
   async function kbDelete(ev) {
     const rec = ev.repeat_rule && ev.repeat_rule !== "none";
