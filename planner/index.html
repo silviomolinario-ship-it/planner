@@ -1430,7 +1430,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-26-1200</span>
+      <span class="status" title="versão desta página">v.2026-11-27-1115</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -2536,6 +2536,32 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
     $("ev-cancel").hidden = true;
   }
 
+  // Tarefa recorrente: cria uma tarefa separada para cada dia que cai na regra, até a data final
+  const SERIES_MAX_DAYS = 1095; // 3 anos, limite de segurança
+  async function createSeries(fields, startDate, endDate, fupChk) {
+    let limit = endDate || shiftDay(startDate, 365);
+    const maxLimit = shiftDay(startDate, SERIES_MAX_DAYS);
+    let truncated = false;
+    if (limit > maxLimit) { limit = maxLimit; truncated = true; }
+    const probe = { starts_on: startDate, repeat_rule: fields.repeat_rule, ends_on: limit };
+    const days = [];
+    for (let d = startDate, i = 0; d <= limit && i <= SERIES_MAX_DAYS; d = shiftDay(d, 1), i++) {
+      if (occurs(probe, d)) days.push(d);
+    }
+    if (!days.length) throw new Error("nenhum dia cai nessa regra");
+    const rows = days.map((day) => Object.assign({}, fields, { repeat_rule: "none", starts_on: day, ends_on: day }));
+    const ids = [];
+    for (let i = 0; i < rows.length; i += 100) {
+      const { data, error } = await sb.from("planner_events").insert(rows.slice(i, i + 100)).select("id");
+      if (error) throw error;
+      (data || []).forEach((r) => ids.push(r.id));
+    }
+    if (fupChk && ids[0]) {
+      await seedCardState(days[0], ids[0], { total: 0, runningSince: null, finished: false, idle: true, fup: true });
+    }
+    return { count: days.length, truncated: truncated, first: days[0] };
+  }
+
   async function addEvent(e) {
     e.preventDefault();
     const title = $("ev-title").value.trim();
@@ -2573,6 +2599,19 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
       const projVal = $("ev-project").value || null;
       const oldProj = editingId ? ((events.find((x) => x.id === editingId) || {}).project_id || null) : null;
       if (projVal || oldProj) fields.project_id = projVal;
+
+      if (!editingId && repeat !== "none") {
+        const res = await createSeries(fields, startDate, endDate, fupChk);
+        const label = res.count + (res.count === 1 ? " tarefa criada" : " tarefas criadas");
+        const cut = res.truncated ? " (limite de 3 anos)" : "";
+        const subNote = subs.length ? " As subtarefas não foram copiadas para as repetições." : "";
+        resetAfterSave();
+        await loadEvents();
+        resetForm();
+        setStatus(label + cut + "." + subNote);
+        closeModal("modal-tarefa");
+        return;
+      }
       const oldSubs = editingId ? subsOf(events.find((x) => x.id === editingId) || {}) : [];
       if (subs.length || oldSubs.length) {
         await syncChildren(subs, oldSubs, {
@@ -2604,15 +2643,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
         if (fupChk) { base.idle = true; base.fup = true; } else { delete base.fup; }
         await seedCardState(startDate, savedId, base);
       }
-      $("ev-title").value = "";
-      $("ev-start").value = nowHour();
-      $("ev-end").value = "";
-      $("ev-repeat").value = "none";
-      $("ev-priority").checked = false;
-      $("ev-kind").value = "tarefa";
-      $("ev-enddate").value = todayStr();
-      $("ev-startdate").value = todayStr();
-      $("ev-level").hidden = true;
+      resetAfterSave();
       await loadEvents();
       resetForm();
       setStatus("Tarefa salva");
@@ -2620,6 +2651,18 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
     } catch (err) {
       setStatus("Não foi possível salvar o compromisso" + (err && err.message ? ": " + err.message : ""));
     }
+  }
+
+  function resetAfterSave() {
+    $("ev-title").value = "";
+    $("ev-start").value = nowHour();
+    $("ev-end").value = "";
+    $("ev-repeat").value = "none";
+    $("ev-priority").checked = false;
+    $("ev-kind").value = "tarefa";
+    $("ev-enddate").value = todayStr();
+    $("ev-startdate").value = todayStr();
+    $("ev-level").hidden = true;
   }
 
   async function deleteEvent(ev) {
