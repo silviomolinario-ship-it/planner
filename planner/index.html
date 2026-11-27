@@ -1432,7 +1432,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-27-1440</span>
+      <span class="status" title="versão desta página">v.2026-11-27-1430</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -2562,7 +2562,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
     if (fupChk && ids[0]) {
       await seedCardState(days[0], ids[0], { total: 0, runningSince: null, finished: false, idle: true, fup: true });
     }
-    return { count: days.length, truncated: truncated, first: days[0], last: days[days.length - 1] };
+    return { count: days.length, truncated: truncated, first: days[0] };
   }
 
   function formError(msg) {
@@ -2621,8 +2621,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
           return;
         }
         const res = await createSeries(fields, startDate, endDate, fupChk);
-        const br = (d) => d.split("-").reverse().join("/");
-        const label = res.count + (res.count === 1 ? " tarefa criada" : " tarefas criadas") + " de " + br(res.first) + (res.last !== res.first ? " a " + br(res.last) : "");
+        const label = res.count + (res.count === 1 ? " tarefa criada" : " tarefas criadas");
         const cut = res.truncated ? " (limite de 3 anos)" : "";
         const subNote = subs.length ? " As subtarefas não foram copiadas para as repetições." : "";
         resetAfterSave();
