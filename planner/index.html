@@ -4484,8 +4484,10 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
       ids.push(ev.id);
       subsOf(ev).forEach((x) => { if (x.child_id) ids.push(x.child_id); });
     });
-    for (const id of ids) {
-      const { error } = await sb.from("planner_events").delete().eq("id", id);
+    const uniq = [...new Set(ids.filter(Boolean))];
+    // Uma requisição por lote de 100 ids: uma série de 99 dias vira uma única exclusão
+    for (let i = 0; i < uniq.length; i += 100) {
+      const { error } = await sb.from("planner_events").delete().in("id", uniq.slice(i, i + 100));
       if (error) throw error;
     }
     await loadEvents();
