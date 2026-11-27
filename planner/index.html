@@ -1430,7 +1430,7 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
       <button id="today" type="button">Hoje</button>
       <span class="spacer"></span>
       <span id="status" class="status" role="status"></span>
-      <span class="status" title="versão desta página">v.2026-11-27-1115</span>
+      <span class="status" title="versão desta página">v.2026-11-27-1125</span>
       <span class="status" id="device-info" title="dispositivo que está acessando"></span>
       <button id="menu-toggle" type="button" aria-expanded="true" aria-controls="app">☰ Esconder menu</button>
       <a href="../" class="back-link">‹ Início</a>
@@ -2601,6 +2601,11 @@ html[data-device="iphone"] .kb-board, html[data-device="ipad"] .kb-board, html[d
       if (projVal || oldProj) fields.project_id = projVal;
 
       if (!editingId && repeat !== "none") {
+        if (endDate === startDate) {
+          setStatus("Defina a data final da repetição (está igual à data inicial)");
+          $("ev-enddate").focus();
+          return;
+        }
         const res = await createSeries(fields, startDate, endDate, fupChk);
         const label = res.count + (res.count === 1 ? " tarefa criada" : " tarefas criadas");
         const cut = res.truncated ? " (limite de 3 anos)" : "";
